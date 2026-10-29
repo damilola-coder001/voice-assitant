@@ -110,7 +110,9 @@ class VoiceWebSocketClient {
 
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws/voice?token=${encodeURIComponent(token)}`;
+      const customWs = localStorage.getItem('nore_ws_url') || window.NORE_WS_URL;
+      const baseWs = customWs ? customWs.replace(/\/+$/, '') : `${protocol}//${window.location.host}`;
+      const wsUrl = `${baseWs}/ws/voice?token=${encodeURIComponent(token)}`;
 
       this.ws = new WebSocket(wsUrl);
       this.ws.binaryType = 'arraybuffer';

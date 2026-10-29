@@ -62,8 +62,27 @@ class Settings(BaseSettings):
     TECH_CACHE_TTL_SECONDS: int = 600
 
     @property
+    def effective_database_url(self) -> str:
+        # On Vercel serverless, root filesystem is read-only.
+        # Fall back to /tmp if SQLite is used without an external database URL.
+        if os.environ.get("VERCEL") and (
+            self.DATABASE_URL == "sqlite+aiosqlite:///./voice_assistant.db"
+            or not self.DATABASE_URL
+        ):
+            return "sqlite+aiosqlite:////tmp/voice_assistant.db"
+        # Support standard PostgreSQL URL format by converting to postgresql+asyncpg
+        if self.DATABASE_URL.startswith("postgres://"):
+            return self.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+        if self.DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in self.DATABASE_URL:
+            return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self.DATABASE_URL
+
+    @property
     def allowed_origins_list(self) -> List[str]:
-        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+        origins = [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+        if os.environ.get("VERCEL"):
+            origins.append("https://*.vercel.app")
+        return origins
 
     @property
     def is_production(self) -> bool:

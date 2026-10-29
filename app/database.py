@@ -9,13 +9,14 @@ logger = logging.getLogger(__name__)
 
 # Configure Async Engine
 engine_kwargs = {"echo": settings.DEBUG}
-if settings.DATABASE_URL.startswith("sqlite"):
+db_url = settings.effective_database_url
+if db_url.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 else:
     engine_kwargs["pool_size"] = 10
     engine_kwargs["max_overflow"] = 20
 
-engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
+engine = create_async_engine(db_url, **engine_kwargs)
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
