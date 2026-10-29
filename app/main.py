@@ -216,7 +216,6 @@ try:
 
 except BaseException as _startup_exc:
     _err_msg = f"{type(_startup_exc).__name__}: {_startup_exc}"
-    _err_tb = traceback.format_exc().splitlines()[-15:]
 
     @app.get("/health")
     @app.get("/{path:path}")
@@ -226,8 +225,5 @@ except BaseException as _startup_exc:
             content={
                 "status": "startup_error",
                 "error": _err_msg,
-                "traceback": _err_tb,
-                "cwd": os.getcwd(),
-                "sys_path": sys.path[:6],
             },
         )
