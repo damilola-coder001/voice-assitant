@@ -36,9 +36,9 @@ class AudioEngine {
     this.bargeInFrames = 0;
     this.playbackStartTime = 0;
     this.bargeInMode = 'voice'; // 'voice' = auto-detect speech, 'manual' = click-only interrupt
-    this.bargeInThreshold = 0.05; // Sensitive voice threshold to detect interruption cleanly
-    this.bargeInRequiredFrames = 3; // ~250ms of sustained speech required to interrupt
-    this.bargeInGracePeriodMs = 300; // Ignore mic for first 300ms of playback startup
+    this.bargeInThreshold = 0.12; // Realistic voice threshold to prevent speaker self-interruption
+    this.bargeInRequiredFrames = 5; // ~420ms of sustained speech required to interrupt
+    this.bargeInGracePeriodMs = 600; // Ignore mic for first 600ms of playback startup
     this.onVadSpeechStart = null;
     this.onVadSpeechEnd = null;
     this.onVadBargeIn = null;
@@ -358,14 +358,32 @@ class AudioEngine {
         return;
       }
 
-      // Dynamic threshold: raise the base threshold proportionally to the
-      // ambient noise floor so speaker bleed cannot trip the detector
-      const dynamicThreshold = Math.max(this.bargeInThreshold, this.ambientFloor * 3.0);
+      // Dynamic threshold: inspect real-time speaker playback output via playbackAnalyser
+      // to ensure speaker audio cannot trip the detector
+      let speakerRms = 0;
+      if (this.playbackAnalyser) {
+        try {
+          const pcmData = new Float32Array(this.playbackAnalyser.fftSize);
+          this.playbackAnalyser.getFloatTimeDomainData(pcmData);
+          let pSum = 0;
+          for (let i = 0; i < pcmData.length; i++) {
+            pSum += pcmData[i] * pcmData[i];
+          }
+          speakerRms = Math.sqrt(pSum / pcmData.length);
+        } catch (_) {}
+      }
+
+      // If speakers are outputting sound, threshold must scale above speaker bleed
+      const dynamicThreshold = Math.max(
+        this.bargeInThreshold,
+        speakerRms * 1.5,
+        this.ambientFloor * 3.5
+      );
 
       if (rms > dynamicThreshold) {
         this.bargeInFrames = (this.bargeInFrames || 0) + 1;
         if (this.bargeInFrames >= this.bargeInRequiredFrames) {
-          console.log(`[AudioEngine] Barge-In: Sustained user voice detected (RMS=${rms.toFixed(4)}, threshold=${dynamicThreshold.toFixed(4)}, frames=${this.bargeInFrames}). Halting assistant.`);
+          console.log(`[AudioEngine] Barge-In: Sustained user voice detected (RMS=${rms.toFixed(4)}, speakerRms=${speakerRms.toFixed(4)}, threshold=${dynamicThreshold.toFixed(4)}, frames=${this.bargeInFrames}). Halting assistant.`);
           this.bargeInFrames = 0;
           this.stopPlayback(true);
           if (this.onVadBargeIn) {

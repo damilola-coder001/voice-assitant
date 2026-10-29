@@ -395,33 +395,48 @@ class ConversationalEngine:
         if re.match(r"^\[.*?\]$", clean_msg):
             return "I am listening. Feel free to speak whenever you are ready."
 
-        # 1. Greetings
+        # 1. Greetings (pure greetings only; if question attached, process it)
         if any(greet in lower_msg for greet in ["hello", "hi there", "hey", "good morning", "good evening"]):
-            if persona_id == "concise":
-                return "Hello! How can I help you right now?"
-            if persona_id == "technical":
-                return "Greetings. Systems are active. What technical problem or architecture are we reviewing today?"
-            return "Hello! I am NORE, your voice assistant. What can I help you with today?"
+            clean_no_punct = re.sub(r"[^\w\s]", " ", lower_msg).strip()
+            tokens = clean_no_punct.split()
+            greeting_words = {"hello", "hi", "hey", "howdy", "greetings", "good", "morning", "afternoon", "evening", "there", "nore", "assistant"}
+            if bool(tokens) and all(t in greeting_words for t in tokens):
+                if persona_id == "concise":
+                    return "Hello! How can I help you right now?"
+                if persona_id == "technical":
+                    return "Greetings. Systems are active. What technical problem or architecture are we reviewing today?"
+                return "Hello! I am NORE, your voice assistant. What can I help you with today?"
+
+            # Strip greeting prefix so downstream logic receives the actual query
+            substantive = re.sub(
+                r"^(?:hello|hi|hey|howdy|greetings|good\s+(?:morning|afternoon|evening))\s*(?:nore|assistant|there)?\s*[,.:;!?-]*\s*",
+                "",
+                clean_msg,
+                flags=re.IGNORECASE,
+            ).strip()
+            if substantive:
+                clean_msg = substantive
+                lower_msg = clean_msg.lower()
 
         # 2. Identity & capabilities
-        if "who are you" in lower_msg or "what are you" in lower_msg or "what is nore" in lower_msg:
+        if any(w in lower_msg for w in ["who are you", "what are you", "what is nore"]) and len(lower_msg.split()) <= 8:
             return (
                 "I am NORE, an intelligent voice platform. I answer your questions, explain complex concepts, "
                 "and speak with you naturally in real time."
             )
 
-        if "what can you do" in lower_msg or "help me with" in lower_msg:
+        if any(w in lower_msg for w in ["what can you do", "help me with"]) and len(lower_msg.split()) <= 10:
             return (
                 "You can ask me questions about technology, science, coding, and architecture, request calculations, "
                 "or brainstorm ideas. Just speak naturally, and I will give you a direct answer."
             )
 
         # 3. Time & Date
-        if "time" in lower_msg and any(w in lower_msg for w in ["what", "current", "tell me"]):
+        if any(phrase in lower_msg for phrase in ["what time is it", "what's the time", "current time", "tell me the time", "time right now"]) or lower_msg.strip(" .!?") in ["time", "current time"]:
             now = datetime.now(timezone.utc).strftime("%A, %B %d, %Y at %I:%M %p UTC")
             return f"The current time is {now}."
 
-        if "date" in lower_msg and any(w in lower_msg for w in ["what", "current", "today"]):
+        if (any(phrase in lower_msg for phrase in ["what date is it", "what's the date", "what is today's date", "today's date"]) or lower_msg.strip(" .!?") in ["date", "today's date"]) and not any(w in lower_msg for w in ["briefing", "news", "happened"]):
             now = datetime.now(timezone.utc).strftime("%A, %B %d, %Y")
             return f"Today is {now}."
 

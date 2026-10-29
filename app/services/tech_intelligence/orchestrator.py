@@ -91,19 +91,37 @@ class TechIntelligenceOrchestrator:
             )
 
         if any(greet in lower_msg for greet in ["hello", "hi there", "hey", "good morning", "good evening"]):
-            return TechIntelligenceResponse(
-                spoken_response="Hello! I am NORE, your technology intelligence voice assistant. What can I research or explain for you today?",
-                sources=[],
-                classification=QueryClassification(
-                    intent=TechIntent.GENERAL_TECH,
-                    primary_domain=TechDomain.SOFTWARE_DEV,
-                    all_domains=[TechDomain.SOFTWARE_DEV],
-                    requires_search=False,
-                    explanation_level=ExplanationLevel.INTERMEDIATE,
-                ),
-            )
+            # Check if this is a pure greeting or if it contains a substantive query
+            clean_no_punct = re.sub(r"[^\w\s]", " ", lower_msg).strip()
+            tokens = clean_no_punct.split()
+            greeting_words = {"hello", "hi", "hey", "howdy", "greetings", "good", "morning", "afternoon", "evening", "there", "nore", "assistant"}
+            is_pure_greeting = bool(tokens) and all(t in greeting_words for t in tokens)
 
-        if any(w in lower_msg for w in ["who are you", "what are you", "what is nore"]):
+            if is_pure_greeting:
+                return TechIntelligenceResponse(
+                    spoken_response="Hello! I am NORE, your technology intelligence voice assistant. What can I research or explain for you today?",
+                    sources=[],
+                    classification=QueryClassification(
+                        intent=TechIntent.GENERAL_TECH,
+                        primary_domain=TechDomain.SOFTWARE_DEV,
+                        all_domains=[TechDomain.SOFTWARE_DEV],
+                        requires_search=False,
+                        explanation_level=ExplanationLevel.INTERMEDIATE,
+                    ),
+                )
+
+            # Strip introductory greeting prefix to focus on the actual user query
+            substantive_msg = re.sub(
+                r"^(?:hello|hi|hey|howdy|greetings|good\s+(?:morning|afternoon|evening))\s*(?:nore|assistant|there)?\s*[,.:;!?-]*\s*",
+                "",
+                clean_msg,
+                flags=re.IGNORECASE,
+            ).strip()
+            if substantive_msg:
+                clean_msg = substantive_msg
+                lower_msg = clean_msg.lower()
+
+        if any(w in lower_msg for w in ["who are you", "what are you", "what is nore"]) and len(lower_msg.split()) <= 8:
             return TechIntelligenceResponse(
                 spoken_response="I am NORE, your real-time technology intelligence assistant. I research current tech developments, verify claims, compare technologies, and deliver live briefings.",
                 sources=[],
@@ -116,7 +134,7 @@ class TechIntelligenceOrchestrator:
                 ),
             )
 
-        if "time" in lower_msg and any(w in lower_msg for w in ["what", "current", "tell me"]):
+        if any(phrase in lower_msg for phrase in ["what time is it", "what's the time", "current time", "tell me the time", "time right now"]) or lower_msg.strip(" .!?") in ["time", "current time"]:
             from datetime import datetime, timezone
             now = datetime.now(timezone.utc).strftime("%A, %B %d, %Y at %I:%M %p UTC")
             return TechIntelligenceResponse(
@@ -131,7 +149,7 @@ class TechIntelligenceOrchestrator:
                 ),
             )
 
-        if "date" in lower_msg and any(w in lower_msg for w in ["what", "current", "today"]) and not any(w in lower_msg for w in ["briefing", "news", "happened"]):
+        if (any(phrase in lower_msg for phrase in ["what date is it", "what's the date", "what is today's date", "today's date"]) or lower_msg.strip(" .!?") in ["date", "today's date"]) and not any(w in lower_msg for w in ["briefing", "news", "happened"]):
             from datetime import datetime, timezone
             now = datetime.now(timezone.utc).strftime("%A, %B %d, %Y")
             return TechIntelligenceResponse(

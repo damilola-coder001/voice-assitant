@@ -470,8 +470,8 @@ class App {
         onBargeIn: () => {
           this.handleBargeIn();
         },
-        silenceTimeoutMs: 650,
-        minSpeechDurationMs: 280,
+        silenceTimeoutMs: 1000,
+        minSpeechDurationMs: 350,
       });
 
       this.setConversationState(ConversationState.LISTENING);

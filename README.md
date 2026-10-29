@@ -290,4 +290,3 @@ If an ElevenLabs API key or server credential is ever accidentally exposed or le
    ```
 
 6. Verify clean scan status before resuming production traffic.
-
