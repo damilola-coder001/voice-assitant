@@ -104,26 +104,29 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager handling DB setup and graceful shutdown."""
     logger.info("Initializing NORE platform...")
     
-    # In development/SQLite, initialize tables if not present
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        if engine.dialect.name == "sqlite":
-            from sqlalchemy import text
-            for col, col_type, default_val in [
-                ("tech_interests", "VARCHAR(255)", "'ai_ml,software_dev,cybersecurity'"),
-                ("tech_explanation_level", "VARCHAR(50)", "'intermediate'"),
-                ("tech_briefing_topics", "VARCHAR(255)", "'all'"),
-                ("tech_summary_style", "VARCHAR(50)", "'balanced'"),
-            ]:
-                try:
-                    await conn.execute(
-                        text(f"ALTER TABLE user_voice_preferences ADD COLUMN {col} {col_type} DEFAULT {default_val}")
-                    )
-                except Exception:
-                    pass
+    try:
+        # In development/SQLite, initialize tables if not present
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            if engine.dialect.name == "sqlite":
+                from sqlalchemy import text
+                for col, col_type, default_val in [
+                    ("tech_interests", "VARCHAR(255)", "'ai_ml,software_dev,cybersecurity'"),
+                    ("tech_explanation_level", "VARCHAR(50)", "'intermediate'"),
+                    ("tech_briefing_topics", "VARCHAR(255)", "'all'"),
+                    ("tech_summary_style", "VARCHAR(50)", "'balanced'"),
+                ]:
+                    try:
+                        await conn.execute(
+                            text(f"ALTER TABLE user_voice_preferences ADD COLUMN {col} {col_type} DEFAULT {default_val}")
+                        )
+                    except Exception:
+                        pass
 
-    # Seed initial owner
-    await seed_initial_owner()
+        # Seed initial owner
+        await seed_initial_owner()
+    except Exception as e:
+        logger.warning(f"Database startup initialization note: {e}")
 
     # Log masked credentials verification (safe display)
     logger.info(f"ElevenLabs Key Loaded: {settings.masked_elevenlabs_key()}")
