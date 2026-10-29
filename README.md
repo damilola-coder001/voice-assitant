@@ -6,7 +6,7 @@ A production-grade, real-time voice intelligence platform powered by **ElevenLab
 
 ## 1. System Architecture
 
-```
+```text
                                     +-----------------------------------------+
                                     |         CLIENT / WEB BROWSER            |
                                     |  - Web Audio API Recording (Mic)        |
@@ -23,7 +23,7 @@ A production-grade, real-time voice intelligence platform powered by **ElevenLab
 |                                                                                                               |
 |  [Security & Identity]               [Real-Time Voice Engine]                 [Persistence & Telemetry]       |
 |   - Argon2id Password Hashing         - Audio Chunking & Format Normalizer     - Async SQLAlchemy 2.0         |
-|   - JWT Access & Refresh Rotation     - Conversational Persona Orchestrator    - SQLite (Dev) / Postgres (Prod|
+|   - JWT Access & Refresh Rotation     - Conversational Persona Orchestrator    - SQLite (Dev) / Postgres      |
 |   - RBAC: ADMIN | USER | AUDITOR      - Instant Interruption Dispatcher        - Alembic Schema Migrations    |
 |   - Sliding-Window Rate Limiter       - Streaming Audio Queue Buffer           - Audit Logs & Usage Tracking  |
 |                                                                                                               |
@@ -48,15 +48,19 @@ A production-grade, real-time voice intelligence platform powered by **ElevenLab
 > [!IMPORTANT]
 > **Zero Client-Side Exposure**:
 > The ElevenLabs API key is a strictly server-side secret.
+>
 > - The client communicates **only** with the Python FastAPI backend via authenticated JWT sessions and WebSockets.
 > - The ElevenLabs API key is **never** sent to the client, logged, or embedded in static files.
 > - Automated CI/CD scans enforce zero secret leaks across code, responses, and git history.
 
 ### Automated Secret Scanning
+
 Run the built-in automated scanner before every deployment or git commit:
+
 ```bash
 python scripts/scan_secrets.py
 ```
+
 This utility inspects all project files, verifies regex patterns against API keys, cloud credentials, tokens, and private keys, and returns exit code `0` only when the codebase is clean.
 
 ---
@@ -64,10 +68,12 @@ This utility inspects all project files, verifies regex patterns against API key
 ## 3. Quickstart (Local Development)
 
 ### Prerequisites
+
 - Python 3.11+
 - Virtual environment (`venv`)
 
 ### Step 1: Clone and Configure Environment
+
 ```bash
 # Copy example environment configuration
 cp .env.example .env
@@ -77,6 +83,7 @@ cp .env.example .env
 ```
 
 ### Step 2: Install Dependencies
+
 ```bash
 python -m venv .venv
 # On Windows:
@@ -86,6 +93,7 @@ source .venv/bin/activate && pip install -r requirements.txt
 ```
 
 ### Step 3: Run the Development Server
+
 ```bash
 # On Windows:
 .\.venv\Scripts\uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -94,12 +102,16 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Step 4: Access the Application
+
 Open your browser to:
+
 - **Web Application**: `http://localhost:8000`
 - **Interactive API Documentation (Swagger)**: `http://localhost:8000/docs`
 
 #### Initial Administrator Credentials
+
 On first boot, the system automatically provisions the initial admin account configured in `.env`:
+
 - **Email**: `admin@voiceassistant.io` (or value of `ADMIN_INITIAL_EMAIL`)
 - **Password**: `ChangeThisPasswordInProduction!123` (or value of `ADMIN_INITIAL_PASSWORD`)
 
@@ -121,8 +133,10 @@ python -m pytest -v tests/
 Connect over WebSocket with authentication:
 `ws://localhost:8000/ws/voice?token=<ACCESS_TOKEN_JWT>`
 
-### Client Messages:
+### Client Messages
+
 1. **Start Turn / Message**:
+
    ```json
    {
      "type": "start_turn",
@@ -132,20 +146,25 @@ Connect over WebSocket with authentication:
      "voice_id": "CwhRBWXzGAHq8TQ4Fs17"
    }
    ```
+
 2. **Instant Interruption**:
+
    ```json
    {
      "type": "interrupt"
    }
    ```
+
 3. **Heartbeat**:
+
    ```json
    {
      "type": "ping"
    }
    ```
 
-### Server Responses:
+### Server Responses
+
 - `{"type": "ready", "user": { ... }}`
 - `{"type": "turn_start", "session_id": 1, "user_message_id": 4}`
 - `{"type": "text_response", "content": "Full response text..."}`
@@ -158,6 +177,7 @@ Connect over WebSocket with authentication:
 ## 6. Production Deployment Guides
 
 ### Option A: Docker Compose (Full Stack)
+
 Includes Backend, PostgreSQL 16, and Redis:
 
 ```bash
@@ -174,6 +194,7 @@ docker compose ps
 ---
 
 ### Option B: Railway Deployment
+
 1. Connect your GitHub repository to Railway.
 2. In the Railway dashboard, add a **PostgreSQL** service and a **Redis** service.
 3. Add the Web Service pointing to your repository.
@@ -190,6 +211,7 @@ docker compose ps
 ---
 
 ### Option C: Render Deployment
+
 1. Create a **New Web Service** from your repository.
 2. Select **Docker** as the runtime.
 3. Attach a Render **PostgreSQL** database.
@@ -203,24 +225,34 @@ docker compose ps
 ---
 
 ### Option D: Fly.io Deployment
+
 1. Install `flyctl` and log in:
+
    ```bash
    fly auth login
    ```
+
 2. Initialize app:
+
    ```bash
    fly launch --no-deploy
    ```
+
 3. Set secrets in Fly:
+
    ```bash
    fly secrets set ELEVENLABS_API_KEY="your-secret-key" JWT_SECRET_KEY="secure-hex-string" ADMIN_INITIAL_PASSWORD="your-strong-password"
    ```
+
 4. Attach Fly Postgres:
+
    ```bash
    fly postgres create
    fly postgres attach <postgres-app-name>
    ```
+
 5. Deploy:
+
    ```bash
    fly deploy
    ```
@@ -228,13 +260,16 @@ docker compose ps
 ---
 
 ### Option E: AWS (ECS Fargate + RDS PostgreSQL)
+
 1. Push Docker image to AWS Elastic Container Registry (ECR):
+
    ```bash
    aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <account_id>.dkr.ecr.<region>.amazonaws.com
    docker build -t voice-assistant:latest .
    docker tag voice-assistant:latest <account_id>.dkr.ecr.<region>.amazonaws.com/voice-assistant:latest
    docker push <account_id>.dkr.ecr.<region>.amazonaws.com/voice-assistant:latest
    ```
+
 2. Store `ELEVENLABS_API_KEY` and `JWT_SECRET_KEY` in **AWS Secrets Manager**.
 3. Create an ECS Task Definition referencing the ECR image, inject secrets from Secrets Manager, and deploy behind an Application Load Balancer with HTTPS enabled.
 
@@ -249,7 +284,10 @@ If an ElevenLabs API key or server credential is ever accidentally exposed or le
 3. **UPDATE HOSTING SECRETS**: Update the environment variable in your production hosting manager (Railway, Render, AWS Secrets Manager, etc.).
 4. **PURGE GIT HISTORY**: If committed to Git, use `git filter-repo` or BFG Repo-Cleaner to permanently excise the commit from history.
 5. **RUN SECURITY SCAN**:
+
    ```bash
    python scripts/scan_secrets.py
    ```
+
 6. Verify clean scan status before resuming production traffic.
+
