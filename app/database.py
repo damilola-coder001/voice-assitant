@@ -30,8 +30,28 @@ class Base(DeclarativeBase):
     """Base declarative class for all SQLAlchemy ORM models."""
     pass
 
+_db_initialized: bool = False
+_db_init_hook = None
+
+def register_db_init_hook(hook) -> None:
+    """Register an async initialization callback for lazy serverless cold starts."""
+    global _db_init_hook
+    _db_init_hook = hook
+
+async def ensure_db_initialized() -> None:
+    """Ensure database schema and initial owner exist (idempotent per worker)."""
+    global _db_initialized
+    if _db_initialized or _db_init_hook is None:
+        return
+    _db_initialized = True
+    try:
+        await _db_init_hook()
+    except Exception as e:
+        logger.warning(f"Lazy database initialization warning: {e}")
+
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency yielding an async database session."""
+    await ensure_db_initialized()
     async with AsyncSessionLocal() as session:
         try:
             yield session

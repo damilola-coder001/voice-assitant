@@ -42,7 +42,7 @@ class Settings(BaseSettings):
 
     # Initial Owner Credentials (Secured First-Run)
     OWNER_INITIAL_EMAIL: Optional[str] = "owner@nore.ai"
-    OWNER_INITIAL_PASSWORD: Optional[str] = "ChangeThisOwnerSecretKey2026!#"
+    OWNER_INITIAL_PASSWORD: Optional[str] = "NoreOwner#2026!Master"
 
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./voice_assistant.db"
@@ -62,10 +62,19 @@ class Settings(BaseSettings):
     TECH_CACHE_TTL_SECONDS: int = 600
 
     @property
+    def is_serverless(self) -> bool:
+        return bool(
+            os.environ.get("VERCEL")
+            or os.environ.get("VERCEL_ENV")
+            or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+            or not os.access(".", os.W_OK)
+        )
+
+    @property
     def effective_database_url(self) -> str:
-        # On Vercel serverless, root filesystem is read-only.
+        # On Vercel / Lambda serverless, root filesystem (/var/task) is read-only.
         # Fall back to /tmp if SQLite is used without an external database URL.
-        if os.environ.get("VERCEL") and (
+        if self.is_serverless and (
             self.DATABASE_URL == "sqlite+aiosqlite:///./voice_assistant.db"
             or not self.DATABASE_URL
         ):
@@ -80,7 +89,7 @@ class Settings(BaseSettings):
     @property
     def allowed_origins_list(self) -> List[str]:
         origins = [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
-        if os.environ.get("VERCEL"):
+        if self.is_serverless:
             origins.append("https://*.vercel.app")
         return origins
 

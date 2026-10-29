@@ -24,6 +24,9 @@ class VoiceWebSocketClient {
     this.heartbeatTimer = null;
     this.heartbeatTimeout = null;
     this.isManualDisconnect = false;
+    this.useHttpFallback = false;
+    this.hasOpenedOnce = false;
+    this.httpTurnAbortController = null;
 
     // Callbacks
     this.onStateChange = null;
@@ -92,6 +95,17 @@ class VoiceWebSocketClient {
     this.token = token;
     this.isManualDisconnect = false;
 
+    const customWs = localStorage.getItem('nore_ws_url') || window.NORE_WS_URL;
+    const isServerlessHost = window.location.hostname.endsWith('.vercel.app') && !customWs;
+    if (isServerlessHost || this.useHttpFallback) {
+      this.useHttpFallback = true;
+      this.setState(ConnectionState.CONNECTED, 'HTTPS Serverless Voice Mode');
+      if (this.onReady) {
+        this.onReady({ type: 'ready', mode: 'http_fallback' });
+      }
+      return;
+    }
+
     // Prevent duplicate connections if already open or connecting
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       if (this.ws.readyState === WebSocket.OPEN) {
@@ -118,6 +132,8 @@ class VoiceWebSocketClient {
       this.ws.binaryType = 'arraybuffer';
 
       this.ws.onopen = () => {
+        this.hasOpenedOnce = true;
+        this.useHttpFallback = false;
         this.reconnectAttempts = 0;
         clearTimeout(this.reconnectTimer);
         this.setState(ConnectionState.CONNECTED);
@@ -183,10 +199,11 @@ class VoiceWebSocketClient {
             }
           }, delay);
         } else {
-          console.warn('[WebSocket] Max reconnect attempts reached.');
-          this.setState(ConnectionState.ERROR, 'Unable to establish real-time voice connection. Please check your network.');
-          if (this.onError) {
-            this.onError('Unable to connect to real-time voice service. Please refresh or try again.');
+          console.warn('[WebSocket] Max reconnect attempts reached; activating HTTPS voice turn fallback.');
+          this.useHttpFallback = true;
+          this.setState(ConnectionState.CONNECTED, 'HTTPS Serverless Voice Mode');
+          if (this.onReady) {
+            this.onReady({ type: 'ready', mode: 'http_fallback' });
           }
         }
       };
@@ -315,15 +332,29 @@ class VoiceWebSocketClient {
   }
 
   async startTurn(text, sessionId, personaId, voiceId) {
+    const token = localStorage.getItem('access_token') || this.token;
+    if (!token) {
+      throw new Error('Please sign in first to use real-time voice conversation.');
+    }
+
+    if (this.useHttpFallback) {
+      await this.executeHttpTurn(text, sessionId, personaId, voiceId, token);
+      return;
+    }
+
     if (!this.isConnected || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      const token = localStorage.getItem('access_token') || this.token;
-      if (!token) {
-        throw new Error('Please sign in first to use real-time voice conversation.');
-      }
       this.connect(token);
-      const ready = await this.waitForConnection(4000);
+      if (this.useHttpFallback) {
+        await this.executeHttpTurn(text, sessionId, personaId, voiceId, token);
+        return;
+      }
+      const ready = await this.waitForConnection(2500);
       if (!ready) {
-        throw new Error('Connecting to voice stream. Please try speaking again in a moment.');
+        console.info('[WebSocket] Falling back to HTTPS voice turn endpoint.');
+        this.useHttpFallback = true;
+        this.setState(ConnectionState.CONNECTED, 'HTTPS Serverless Voice Mode');
+        await this.executeHttpTurn(text, sessionId, personaId, voiceId, token);
+        return;
       }
     }
 
@@ -336,8 +367,100 @@ class VoiceWebSocketClient {
     }));
   }
 
+  async executeHttpTurn(text, sessionId, personaId, voiceId, token) {
+    if (this.httpTurnAbortController) {
+      try {
+        this.httpTurnAbortController.abort();
+      } catch (_) {}
+    }
+    this.httpTurnAbortController = new AbortController();
+
+    if (this.onTurnStart) {
+      this.onTurnStart({ type: 'turn_start', session_id: sessionId });
+    }
+
+    const res = await fetch('/api/speech/turn', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        text: text,
+        session_id: sessionId,
+        persona_id: personaId || 'executive',
+        voice_id: voiceId || null,
+      }),
+      signal: this.httpTurnAbortController.signal,
+    });
+
+    if (!res.ok) {
+      let detail = `Voice turn failed (${res.status})`;
+      try {
+        const errJson = await res.json();
+        if (errJson.detail) detail = errJson.detail;
+      } catch (_) {}
+      throw new Error(detail);
+    }
+
+    const data = await res.json();
+
+    if (data.tech_intent && this.onTechIntent) {
+      this.onTechIntent(data.tech_intent);
+    }
+    if (data.tech_sources && this.onTechSources) {
+      this.onTechSources(data.tech_sources);
+    }
+    if (data.fact_check && this.onFactCheckResult) {
+      this.onFactCheckResult(data.fact_check);
+    }
+    if (data.briefing && this.onBriefingData) {
+      this.onBriefingData(data.briefing);
+    }
+    if (data.text_response && this.onTextResponse) {
+      this.onTextResponse(data.text_response);
+    }
+
+    if (data.audio_base64) {
+      const binaryStr = atob(data.audio_base64);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+      audioEngine.startStreamingPlayback(data.sample_rate || 24000, data.channels || 1);
+      await audioEngine.queueAudioChunk(bytes.buffer);
+      audioEngine.endStreamingPlayback();
+    } else if (data.fallback === 'browser_speech' && this.onVoiceStreamFallback) {
+      this.onVoiceStreamFallback({
+        type: 'voice_stream_fallback',
+        reason: data.fallback_reason || 'no_api_key',
+        message: data.fallback_message || 'Using browser voice synthesis.',
+        text: data.text_response,
+        message_id: data.message_id,
+        session_id: data.session_id,
+      });
+    }
+
+    if (this.onTurnComplete) {
+      this.onTurnComplete({
+        type: 'turn_complete',
+        session_id: data.session_id,
+        message_id: data.message_id,
+        latency_ms: data.latency_ms,
+        characters: data.characters,
+        fallback: data.fallback,
+      });
+    }
+  }
+
   interrupt() {
     audioEngine.stopPlayback();
+    if (this.httpTurnAbortController) {
+      try {
+        this.httpTurnAbortController.abort();
+      } catch (_) {}
+      this.httpTurnAbortController = null;
+    }
     if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
       try {
         this.ws.send(JSON.stringify({ type: 'interrupt' }));
@@ -347,6 +470,7 @@ class VoiceWebSocketClient {
 
   disconnect() {
     this.isManualDisconnect = true;
+    this.useHttpFallback = false;
     this.cleanupSocket();
     this.setState(ConnectionState.DISCONNECTED, 'User signed out');
     this.token = null;

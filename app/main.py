@@ -11,7 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api import api_router
 from app.config import settings
-from app.database import AsyncSessionLocal, Base, engine
+from app.database import AsyncSessionLocal, Base, engine, ensure_db_initialized, register_db_init_hook
 from app.models.user import RoleEnum, User, UserVoicePreference
 from app.security.passwords import hash_password
 from app.services.elevenlabs import elevenlabs_service
@@ -99,34 +99,34 @@ async def seed_initial_owner():
                 "No Owner account exists. Please run 'python scripts/init_owner.py' to securely initialize the platform Owner."
             )
 
+async def initialize_database_and_owner():
+    """Create database tables and seed initial platform Owner if missing."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        if engine.dialect.name == "sqlite":
+            from sqlalchemy import text
+            for col, col_type, default_val in [
+                ("tech_interests", "VARCHAR(255)", "'ai_ml,software_dev,cybersecurity'"),
+                ("tech_explanation_level", "VARCHAR(50)", "'intermediate'"),
+                ("tech_briefing_topics", "VARCHAR(255)", "'all'"),
+                ("tech_summary_style", "VARCHAR(50)", "'balanced'"),
+            ]:
+                try:
+                    await conn.execute(
+                        text(f"ALTER TABLE user_voice_preferences ADD COLUMN {col} {col_type} DEFAULT {default_val}")
+                    )
+                except Exception:
+                    pass
+
+    await seed_initial_owner()
+
+register_db_init_hook(initialize_database_and_owner)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager handling DB setup and graceful shutdown."""
     logger.info("Initializing NORE platform...")
-    
-    try:
-        # In development/SQLite, initialize tables if not present
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-            if engine.dialect.name == "sqlite":
-                from sqlalchemy import text
-                for col, col_type, default_val in [
-                    ("tech_interests", "VARCHAR(255)", "'ai_ml,software_dev,cybersecurity'"),
-                    ("tech_explanation_level", "VARCHAR(50)", "'intermediate'"),
-                    ("tech_briefing_topics", "VARCHAR(255)", "'all'"),
-                    ("tech_summary_style", "VARCHAR(50)", "'balanced'"),
-                ]:
-                    try:
-                        await conn.execute(
-                            text(f"ALTER TABLE user_voice_preferences ADD COLUMN {col} {col_type} DEFAULT {default_val}")
-                        )
-                    except Exception:
-                        pass
-
-        # Seed initial owner
-        await seed_initial_owner()
-    except Exception as e:
-        logger.warning(f"Database startup initialization note: {e}")
+    await ensure_db_initialized()
 
     # Log masked credentials verification (safe display)
     logger.info(f"ElevenLabs Key Loaded: {settings.masked_elevenlabs_key()}")
@@ -158,7 +158,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins_list,
-    allow_origin_regex=r"^https?://.*\.trycloudflare\.com$",
+    allow_origin_regex=r"^https?://.*\.(trycloudflare\.com|vercel\.app)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -191,7 +191,17 @@ async def api_health_check():
     return {"status": "healthy", "service": settings.APP_NAME, "version": "1.0.0"}
 
 # Mount Static Frontend
-STATIC_DIR = Path(__file__).parent / "static"
+def _resolve_static_dir() -> Path:
+    for candidate in (
+        Path(__file__).resolve().parent / "static",
+        Path.cwd() / "app" / "static",
+        Path("/var/task/app/static"),
+    ):
+        if candidate.exists() and (candidate / "index.html").exists():
+            return candidate
+    return Path(__file__).resolve().parent / "static"
+
+STATIC_DIR = _resolve_static_dir()
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
