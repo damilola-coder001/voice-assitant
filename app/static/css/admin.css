@@ -1,0 +1,148 @@
+/* Admin Dashboard, Telemetry Cards, User Management & Audit Logs - NORE Luxury Theme */
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 600px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+}
+
+.metric-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  padding: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-luxe), var(--inner-bevel);
+  transition: all var(--transition-fast);
+}
+
+.metric-card:hover {
+  border-color: var(--border-glass-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.95), 0 0 25px var(--gold-glow-subtle);
+}
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--gold-light);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metric-value {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  text-shadow: 0 2px 14px rgba(245, 208, 97, 0.25);
+}
+
+.metric-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Data Tables */
+.table-container {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+  background: rgba(31, 21, 18, 0.65);
+  box-shadow: var(--shadow-md);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.data-table th {
+  background: rgba(43, 29, 25, 0.95);
+  padding: 0.9rem 1.15rem;
+  color: var(--accent-light);
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.data-table td {
+  padding: 0.9rem 1.15rem;
+  border-bottom: 1px solid var(--border-glass-white);
+  color: var(--text-secondary);
+}
+
+.data-table tr:hover td {
+  background: var(--bg-glass-gold);
+  color: #FFFFFF;
+}
+
+/* Role Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-owner {
+  background: rgba(245, 208, 97, 0.25);
+  color: var(--accent-bright);
+  border: 1px solid rgba(245, 208, 97, 0.65);
+  box-shadow: 0 0 16px rgba(245, 208, 97, 0.35);
+}
+
+.badge-protected {
+  background: rgba(245, 208, 97, 0.15);
+  color: #FFFFFF;
+  border: 1px solid rgba(245, 208, 97, 0.4);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+}
+
+.badge-admin {
+  background: rgba(184, 107, 14, 0.18);
+  color: #F8D877;
+  border: 1px solid rgba(184, 107, 14, 0.4);
+}
+
+.badge-user {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.badge-active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.badge-inactive {
+  background: rgba(239, 68, 68, 0.15);
+  color: #FCA5A5;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}

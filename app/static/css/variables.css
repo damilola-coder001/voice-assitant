@@ -1,0 +1,101 @@
+/* Modern Design System & CSS Custom Properties
+ * Palette: Burgundy (#7A1419), Warm Sand (#BFB09C), Amber Ochre (#B86B0E), Dusty Mauve (#8E5C65), Warm Gold (#F5D061)
+ */
+:root {
+  /* Rich Deep Burgundy & Roasted Espresso Dark Foundation */
+  --bg-primary: #140708;
+  --bg-secondary: #1E0C0E;
+  --bg-tertiary: #2B1215;
+  --bg-elevated: #3A181D;
+  --bg-card: rgba(43, 18, 21, 0.78);
+  --bg-card-hover: rgba(58, 24, 29, 0.90);
+  --bg-glass: rgba(245, 208, 97, 0.05);
+  --bg-glass-gold: rgba(245, 208, 97, 0.12);
+  --bg-glass-mauve: rgba(142, 92, 101, 0.16);
+
+  /* Primary Accent & Highlights - Warm Gold & Amber Ochre */
+  --accent-primary: #F5D061;
+  --accent-light: #FBF0CC;
+  --accent-bright: #F8D877;
+  --accent-dark: #B86B0E;
+  --accent-contrast: #180608;
+  --accent-gradient: linear-gradient(135deg, #F8D877 0%, #D89A25 55%, #B86B0E 100%);
+  --accent-gradient-hover: linear-gradient(135deg, #FFF0B3 0%, #E6AC38 55%, #C77512 100%);
+  --accent-glow: rgba(245, 208, 97, 0.35);
+  --accent-glow-intense: rgba(245, 208, 97, 0.65);
+  --accent-glow-subtle: rgba(245, 208, 97, 0.16);
+
+  /* User-Provided 5-Color Swatch Palette Tokens */
+  --palette-burgundy: #7A1419;
+  --palette-burgundy-dark: #4A0B0E;
+  --palette-burgundy-glow: rgba(122, 20, 25, 0.45);
+  --palette-sand: #BFB09C;
+  --palette-sand-light: #E2D9CC;
+  --palette-ochre: #B86B0E;
+  --palette-ochre-glow: rgba(184, 107, 14, 0.45);
+  --palette-mauve: #8E5C65;
+  --palette-mauve-glow: rgba(142, 92, 101, 0.35);
+  --palette-gold: #F5D061;
+
+  /* Semantic Aliases for Complete Backwards-Compatibility */
+  --gold-primary: #F5D061;
+  --gold-light: #FBF0CC;
+  --gold-bright: #F8D877;
+  --gold-dark: #B86B0E;
+  --gold-bronze: #7A1419;
+  --gold-gradient: linear-gradient(135deg, #F8D877 0%, #D89A25 55%, #B86B0E 100%);
+  --gold-gradient-hover: linear-gradient(135deg, #FFF0B3 0%, #E6AC38 55%, #C77512 100%);
+  --gold-gradient-soft: rgba(245, 208, 97, 0.10);
+  --gold-gradient-border: rgba(245, 208, 97, 0.40);
+  --gold-gradient-text: #F8D877;
+  --gold-glow: rgba(245, 208, 97, 0.35);
+  --gold-glow-intense: rgba(245, 208, 97, 0.65);
+  --gold-glow-subtle: rgba(245, 208, 97, 0.16);
+
+  /* High-Contrast Balanced Warm Sand & Ivory Typography */
+  --text-primary: #FAF6F0;
+  --text-secondary: #D6CBBC;
+  --text-muted: #A89A87;
+  --text-dim: #7A6D5E;
+
+  /* Specular Borders & Frosted Boundaries */
+  --border-glass: rgba(245, 208, 97, 0.16);
+  --border-glass-sand: rgba(191, 176, 156, 0.22);
+  --border-glass-mauve: rgba(142, 92, 101, 0.30);
+  --border-glass-white: rgba(255, 255, 255, 0.10);
+  --border-glass-hover: rgba(245, 208, 97, 0.50);
+  --border-glass-active: rgba(248, 216, 119, 0.80);
+  --inner-bevel: inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+
+  /* Status Colors */
+  --status-listening: #10B981;
+  --status-listening-glow: rgba(16, 185, 129, 0.45);
+  --status-thinking: #B86B0E;
+  --status-thinking-glow: rgba(184, 107, 14, 0.55);
+  --status-speaking: #F5D061;
+  --status-speaking-glow: rgba(245, 208, 97, 0.60);
+  --status-danger: #EF4444;
+  --status-danger-glow: rgba(239, 68, 68, 0.45);
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Outfit', var(--font-sans);
+
+  /* Shadows & Elevations */
+  --shadow-sm: 0 2px 8px rgba(20, 7, 8, 0.55);
+  --shadow-md: 0 8px 24px rgba(20, 7, 8, 0.70);
+  --shadow-lg: 0 18px 48px rgba(20, 7, 8, 0.90);
+  --shadow-gold: 0 0 30px var(--accent-glow);
+  --shadow-luxe: 0 14px 40px -10px rgba(20, 7, 8, 0.85), 0 0 24px -2px var(--accent-glow-subtle);
+
+  /* Transitions & Animation Curves */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 260ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+}

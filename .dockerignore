@@ -1,0 +1,30 @@
+# Exclude sensitive environment files and secrets
+.env
+.env.*
+*.env
+
+# Exclude local databases and data journals
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Exclude virtual environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+audio_cache/
+
+# Exclude source control and ide metadata
+.git/
+.gitignore
+.idea/
+.vscode/
+
+# Exclude documentation and local scratch files
+.gemini/
+tests/

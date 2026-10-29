@@ -1,0 +1,72 @@
+services:
+  # PostgreSQL Production Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: nore_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nore_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeThisPostgresSecretInProd!}
+      POSTGRES_DB: ${POSTGRES_DB:-nore_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nore_admin} -d ${POSTGRES_DB:-nore_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis In-Memory Cache & PubSub
+  redis:
+    image: redis:7-alpine
+    container_name: nore_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # NORE Voice Platform Backend Application
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nore_backend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - APP_ENV=production
+      - APP_NAME=NORE
+      - PORT=8000
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-nore_admin}:${POSTGRES_PASSWORD:-ChangeThisPostgresSecretInProd!}@postgres:5432/${POSTGRES_DB:-nore_db}
+      - REDIS_URL=redis://redis:6379/0
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - ELEVENLABS_DEFAULT_VOICE_ID=${ELEVENLABS_DEFAULT_VOICE_ID:-CwhRBWXzGAHq8TQ4Fs17}
+      - ELEVENLABS_DEFAULT_MODEL_ID=${ELEVENLABS_DEFAULT_MODEL_ID:-eleven_turbo_v2_5}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - OWNER_INITIAL_EMAIL=${OWNER_INITIAL_EMAIL:-owner@nore.ai}
+      - OWNER_INITIAL_PASSWORD=${OWNER_INITIAL_PASSWORD}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+  redis_data:

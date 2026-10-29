@@ -1,0 +1,516 @@
+/* Audio Visualizer, Mic Centerpiece & Real-Time Waveform - NORE Luxury Theme */
+
+.studio-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  gap: 2rem;
+  text-align: center;
+}
+
+/* Visualizer Stage */
+.visualizer-stage {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(245, 208, 97, 0.08) 0%, rgba(30, 12, 14, 0.95) 100%),
+    var(--bg-primary);
+  border: 1px solid var(--border-glass);
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.8), 0 20px 50px -10px rgba(20, 7, 8, 0.8), var(--inner-bevel);
+  overflow: hidden;
+}
+
+#audio-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* Pulsing Status Orb - Hellblau (#F5D061) & Schokobraun (#7A1419) */
+.status-orb {
+  position: relative;
+  z-index: 2;
+  width: 108px;
+  height: 108px;
+  border-radius: var(--radius-full);
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 45px var(--accent-glow), 0 0 18px var(--accent-glow-intense), inset 0 2px 4px rgba(255, 255, 255, 0.4), inset 0 -2px 6px rgba(0, 0, 0, 0.35);
+  transition: all var(--transition-normal);
+  color: #180608;
+}
+
+.status-orb svg {
+  width: 48px;
+  height: 48px;
+  color: #180608;
+  transition: transform var(--transition-fast);
+  filter: drop-shadow(0 2px 4px rgba(255, 255, 255, 0.2));
+}
+
+/* Orb States: IDLE, LISTENING, PROCESSING, SPEAKING, ERROR, OFFLINE */
+.status-orb.idle {
+  background: linear-gradient(135deg, #F5D061 0%, #B86B0E 100%);
+  box-shadow: 0 0 35px rgba(245, 208, 97, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.4), inset 0 -2px 6px rgba(0, 0, 0, 0.35);
+  animation: pulse-idle 3s infinite ease-in-out;
+}
+
+.status-orb.listening {
+  background: linear-gradient(135deg, #10B981 0%, #06B6D4 100%);
+  box-shadow: 0 0 55px rgba(16, 185, 129, 0.55), 0 0 25px rgba(6, 182, 212, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.35);
+  animation: pulse-listening 1.8s infinite;
+  color: #FFFFFF;
+}
+
+.status-orb.listening svg {
+  color: #FFFFFF;
+}
+
+.status-orb.processing,
+.status-orb.thinking {
+  background: linear-gradient(135deg, #F5D061 0%, #818CF8 100%);
+  box-shadow: 0 0 55px rgba(245, 208, 97, 0.6), 0 0 25px rgba(129, 140, 248, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.35);
+  animation: pulse-thinking 1.4s infinite;
+  color: #180608;
+}
+
+.status-orb.speaking {
+  background: linear-gradient(135deg, #FFF0B3 0%, #F5D061 100%);
+  box-shadow: 0 0 65px rgba(245, 208, 97, 0.7), 0 0 25px rgba(255, 255, 255, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  animation: pulse-speaking 1s infinite alternate;
+  color: #180608;
+}
+
+.status-orb.error {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  box-shadow: 0 0 55px rgba(239, 68, 68, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  animation: pulse-error 1.2s infinite;
+  color: #FFFFFF;
+}
+
+.status-orb.error svg {
+  color: #FFFFFF;
+}
+
+.status-orb.connecting,
+.status-orb.reconnecting {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  box-shadow: 0 0 45px rgba(245, 158, 11, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  animation: pulse-reconnecting 1.5s infinite ease-in-out;
+  color: #180608;
+}
+
+.status-orb.offline {
+  background: #7A1419;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+  opacity: 0.6;
+  color: var(--text-muted);
+}
+
+@keyframes pulse-reconnecting {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.04); opacity: 1; box-shadow: 0 0 60px rgba(245, 158, 11, 0.8); }
+}
+
+@keyframes pulse-idle {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(245, 208, 97, 0.35); }
+  50% { transform: scale(1.03); box-shadow: 0 0 50px rgba(245, 208, 97, 0.55); }
+}
+
+@keyframes pulse-error {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes pulse-listening {
+  0% { transform: scale(1); box-shadow: 0 0 30px var(--status-listening-glow); }
+  50% { transform: scale(1.08); box-shadow: 0 0 70px var(--status-listening-glow), 0 0 30px var(--gold-glow); }
+  100% { transform: scale(1); box-shadow: 0 0 30px var(--status-listening-glow); }
+}
+
+@keyframes pulse-thinking {
+  0% { transform: rotate(0deg) scale(0.98); }
+  50% { transform: rotate(180deg) scale(1.05); }
+  100% { transform: rotate(360deg) scale(0.98); }
+}
+
+@keyframes pulse-speaking {
+  0% { transform: scale(1); filter: brightness(1); }
+  100% { transform: scale(1.07); filter: brightness(1.25); box-shadow: 0 0 80px var(--gold-glow-intense); }
+}
+
+/* Status Pill Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 1.15rem;
+  border-radius: var(--radius-full);
+  background: rgba(14, 14, 20, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--gold-light);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--text-muted);
+  transition: all var(--transition-fast);
+}
+
+.status-dot.active,
+.status-dot.idle,
+.status-dot.ready,
+.status-dot.connected {
+  background: var(--gold-bright);
+  box-shadow: 0 0 12px var(--gold-bright);
+}
+
+.status-dot.connecting,
+.status-dot.reconnecting {
+  background: #F59E0B;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.7);
+  animation: pulse-dot 1.2s infinite ease-in-out;
+}
+
+.status-dot.listening {
+  background: #10B981;
+  box-shadow: 0 0 12px #10B981;
+  animation: pulse-dot 1s infinite ease-in-out;
+}
+
+.status-dot.processing,
+.status-dot.thinking {
+  background: #60A5FA;
+  box-shadow: 0 0 12px #60A5FA;
+  animation: pulse-dot 1.2s infinite ease-in-out;
+}
+
+.status-dot.speaking {
+  background: #A78BFA;
+  box-shadow: 0 0 14px #A78BFA;
+  animation: pulse-dot 0.8s infinite alternate;
+}
+
+.status-dot.error {
+  background: #EF4444;
+  box-shadow: 0 0 12px #EF4444;
+}
+
+.status-dot.offline {
+  background: #6B7280;
+  box-shadow: none;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.6; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Live Transcript Ticker */
+.transcript-box {
+  width: 100%;
+  min-height: 85px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 1.25rem;
+  background: rgba(36, 25, 21, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  color: #F3F7FA;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  text-align: left;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5), var(--shadow-sm);
+}
+
+.transcript-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+/* Controls Bar */
+.voice-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.btn-conversation-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding: 0.95rem 2.25rem;
+  border-radius: var(--radius-full);
+  font-family: var(--font-heading);
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-bounce);
+  border: 2px solid transparent;
+  outline: none;
+  user-select: none;
+}
+
+.btn-conversation-toggle .btn-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-conversation-toggle.idle {
+  background: linear-gradient(135deg, #F5D061 0%, #B86B0E 100%);
+  color: #180608;
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 8px 30px rgba(245, 208, 97, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.btn-conversation-toggle.idle:hover {
+  transform: translateY(-2px) scale(1.02);
+  background: linear-gradient(135deg, #F8D877 0%, #D89A25 100%);
+  box-shadow: 0 12px 38px rgba(245, 208, 97, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.btn-conversation-toggle.active {
+  background: var(--status-danger);
+  color: #FFFFFF;
+  border-color: rgba(255, 200, 200, 0.6);
+  box-shadow: 0 0 35px var(--status-danger-glow);
+  animation: pulse-session-active 2s infinite ease-in-out;
+}
+
+.btn-conversation-toggle.active:hover {
+  transform: scale(1.04);
+  background: #DC2626;
+  box-shadow: 0 0 45px var(--status-danger-glow);
+}
+
+@keyframes pulse-session-active {
+  0% { transform: scale(1); box-shadow: 0 0 25px rgba(239, 68, 68, 0.35); }
+  50% { transform: scale(1.025); box-shadow: 0 0 45px rgba(239, 68, 68, 0.65); }
+  100% { transform: scale(1); box-shadow: 0 0 25px rgba(239, 68, 68, 0.35); }
+}
+
+.btn-mic {
+  width: 76px;
+  height: 76px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #F5D061 0%, #B86B0E 100%);
+  color: #180608;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 8px 30px rgba(245, 208, 97, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  transition: all var(--transition-bounce);
+}
+
+.btn-mic svg {
+  width: 34px;
+  height: 34px;
+  color: #180608;
+  filter: drop-shadow(0 2px 4px rgba(255, 255, 255, 0.2));
+}
+
+.btn-mic:hover {
+  transform: scale(1.06);
+  background: linear-gradient(135deg, #F8D877 0%, #D89A25 100%);
+  box-shadow: 0 10px 40px rgba(245, 208, 97, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.btn-mic.recording {
+  background: var(--status-danger);
+  color: white;
+  border-color: rgba(255, 200, 200, 0.6);
+  box-shadow: 0 0 45px var(--status-danger-glow);
+  animation: pulse-danger 1.5s infinite;
+}
+
+@keyframes pulse-danger {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); box-shadow: 0 0 55px var(--status-danger-glow); }
+  100% { transform: scale(1); }
+}
+
+.btn-interrupt {
+  padding: 0.65rem 1.35rem;
+  border-radius: var(--radius-full);
+  background: rgba(239, 68, 68, 0.15);
+  color: #FCA5A5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  font-weight: 700;
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.2);
+}
+
+.btn-interrupt.visible {
+  display: inline-flex;
+}
+
+.btn-interrupt:hover {
+  background: rgba(239, 68, 68, 0.28);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
+}
+
+/* Responsive Studio Adaptations across Breakpoints (320px - 1440px) */
+@media (max-width: 1024px) {
+  .visualizer-stage {
+    height: 260px;
+  }
+}
+
+@media (max-width: 768px) {
+  .studio-wrapper {
+    gap: 1.25rem;
+    height: auto;
+    min-height: 100%;
+  }
+
+  .visualizer-stage {
+    height: 230px;
+  }
+
+  .status-orb {
+    width: 92px;
+    height: 92px;
+  }
+
+  .status-orb svg {
+    width: 42px;
+    height: 42px;
+  }
+
+  .transcript-box {
+    font-size: 0.95rem;
+    padding: 1rem;
+    min-height: 75px;
+    max-height: 130px;
+  }
+
+  .btn-conversation-toggle {
+    padding: 0.85rem 1.85rem;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .studio-wrapper {
+    gap: 1rem;
+    padding: 0.25rem 0;
+  }
+
+  .visualizer-stage {
+    height: 200px;
+    border-radius: var(--radius-md);
+  }
+
+  .status-orb {
+    width: 84px;
+    height: 84px;
+  }
+
+  .status-orb svg {
+    width: 38px;
+    height: 38px;
+  }
+
+  .status-badge {
+    padding: 0.35rem 0.95rem;
+    font-size: 0.78rem;
+  }
+
+  .transcript-box {
+    font-size: 0.9rem;
+    padding: 0.85rem;
+    min-height: 70px;
+    max-height: 115px;
+  }
+
+  .voice-controls {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .btn-conversation-toggle {
+    width: 100%;
+    max-width: 340px;
+    min-height: 52px;
+    padding: 0.85rem 1.5rem;
+    font-size: 0.94rem;
+  }
+
+  .btn-mic {
+    width: 64px;
+    height: 64px;
+  }
+
+  .btn-mic svg {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 380px) {
+  .visualizer-stage {
+    height: 175px;
+  }
+
+  .status-orb {
+    width: 76px;
+    height: 76px;
+  }
+
+  .status-orb svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  .transcript-box {
+    font-size: 0.84rem;
+    padding: 0.7rem 0.75rem;
+    min-height: 65px;
+    max-height: 100px;
+  }
+
+  .btn-conversation-toggle {
+    font-size: 0.88rem;
+    min-height: 48px;
+    padding: 0.75rem 1rem;
+    letter-spacing: 0.03em;
+  }
+}
+

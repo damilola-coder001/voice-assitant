@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NORE | Real-Time Voice Intelligence</title>
+  <meta name="description" content="NORE - Production Real-Time Voice Intelligence Platform powered by ElevenLabs, WebSockets, and RBAC." />
+  
+  <!-- Modern Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="/static/css/variables.css?v=2.2.0" />
+  <link rel="stylesheet" href="/static/css/layout.css?v=2.2.0" />
+  <link rel="stylesheet" href="/static/css/components.css?v=2.2.0" />
+  <link rel="stylesheet" href="/static/css/visualizer.css?v=2.2.0" />
+  <link rel="stylesheet" href="/static/css/admin.css?v=2.2.0" />
+</head>
+<body>
+  <!-- Ambient Atmospheric Lighting -->
+  <div class="ambient-bg"></div>
+
+  <div id="app">
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="2.2">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="22"></line>
+          </svg>
+        </div>
+        <div class="brand-title">NORE</div>
+        <span class="brand-badge">PROD</span>
+        <button id="btn-sidebar-close" class="btn-sidebar-close" aria-label="Close navigation menu" title="Close Menu">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2.2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-item active" data-view="studio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          </svg>
+          <span>Voice Studio</span>
+        </div>
+
+        <div class="nav-item" data-view="conversations">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Conversations</span>
+        </div>
+
+        <div class="nav-item" data-view="personas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 16v-4"></path>
+            <path d="M12 8h.01"></path>
+          </svg>
+          <span>Personas & Voices</span>
+        </div>
+
+        <div class="nav-item" data-view="admin" style="display: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="9" y1="21" x2="9" y2="9"></line>
+          </svg>
+          <span>Admin Dashboard</span>
+        </div>
+      </nav>
+
+      <!-- User Profile Card -->
+      <div class="user-profile-card">
+        <div class="user-avatar" id="sidebar-user-avatar">U</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-user-name">Authenticating...</div>
+          <div class="user-role-badge" id="sidebar-user-role">Guest</div>
+        </div>
+        <button class="btn-icon" id="btn-logout" title="Sign Out">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="btn-menu-toggle" class="btn-menu-toggle" aria-label="Open navigation menu" aria-expanded="false" title="Menu">
+            <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="2.2">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <h1 class="topbar-title">NORE</h1>
+          <div class="status-badge">
+            <div class="status-dot active"></div>
+            <span id="status-pill-text">Voice Ready</span>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="btn-interrupt" class="btn-interrupt">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5">
+              <rect x="6" y="6" width="12" height="12"></rect>
+            </svg>
+            <span class="btn-interrupt-label">Interrupt</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- VIEW 1: VOICE STUDIO -->
+      <section class="view-container active" id="view-studio">
+        <div class="studio-wrapper">
+          <!-- Visualizer Stage -->
+          <div class="visualizer-stage">
+            <canvas id="audio-canvas"></canvas>
+            <div class="status-orb" id="status-orb">
+              <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="22"></line>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Live Interaction State Badge (Section 24 & 44: Clear non-animation communication) -->
+          <div class="status-badge" role="status" aria-live="polite" id="state-indicator-badge">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text-label">IDLE</span>
+          </div>
+
+          <!-- Live Transcript Ticker -->
+          <div class="transcript-box" id="transcript-ticker" role="region" aria-label="Conversation Transcript" aria-live="polite">
+            <div class="transcript-placeholder">
+              Click <strong>Start Conversation</strong> or press <strong>Spacebar</strong> to begin.
+            </div>
+          </div>
+
+          <!-- Voice Session Controls -->
+          <div class="voice-controls">
+            <button class="btn-conversation-toggle idle" id="btn-session-toggle" role="button" aria-label="Start continuous voice conversation" aria-pressed="false" tabindex="0" title="Start or Stop Continuous Voice Conversation (Spacebar)">
+              <div class="btn-icon-wrapper" id="btn-session-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="2.2">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="22"></line>
+                </svg>
+              </div>
+              <span id="btn-session-label">START CONVERSATION</span>
+            </button>
+          </div>
+
+          <!-- Technology Intelligence Quick Action Bar -->
+          <div class="tech-briefing-bar" id="tech-briefing-bar">
+            <button class="tech-chip-btn" data-query="Give me today's technology briefing.">Today's Tech Briefing</button>
+            <button class="tech-chip-btn" data-query="Give me the latest AI briefing.">AI & ML Briefing</button>
+            <button class="tech-chip-btn" data-query="Give me the developer briefing.">Dev Tools Briefing</button>
+            <button class="tech-chip-btn" data-query="What happened in cybersecurity today?">Cybersecurity</button>
+            <button class="tech-chip-btn" data-query="What are the trending developer discussions on Hacker News?">Trending Tech</button>
+          </div>
+
+          <!-- Quick Text Input Fallback -->
+          <form id="form-text-input" class="text-input-form">
+            <input type="text" id="input-text-prompt" class="form-input" placeholder="Type a tech question or topic..." />
+            <button type="submit" class="btn btn-primary btn-send-prompt">Send</button>
+          </form>
+
+          <!-- Technology Intelligence Results & Verified Sources -->
+          <div class="tech-meta-container" id="tech-meta-container">
+            <div id="tech-factcheck-slot"></div>
+            <div id="tech-briefing-slot"></div>
+            <div id="tech-sources-slot"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: CONVERSATION VAULT -->
+      <section class="view-container" id="view-conversations">
+        <div class="conversations-layout">
+          <!-- Sessions Sidebar -->
+          <div class="glass-card conversations-sidebar-panel">
+            <div class="sessions-header-bar">
+              <h3 style="font-family: var(--font-heading); font-size: 1.1rem;">Sessions</h3>
+            </div>
+            <div id="sessions-list" class="sessions-scroll-list">
+              <!-- Dynamic session cards -->
+            </div>
+          </div>
+
+          <!-- Messages Transcript Viewer -->
+          <div class="glass-card conversations-messages-panel">
+            <div class="transcript-header-bar">
+              <h3 style="font-family: var(--font-heading); font-size: 1.15rem;">Dialogue Transcript</h3>
+              <div class="export-actions-group">
+                <button class="btn btn-secondary btn-export-action" id="btn-export-md">Export Markdown</button>
+                <button class="btn btn-secondary btn-export-action" id="btn-export-json">Export JSON</button>
+              </div>
+            </div>
+            <div id="messages-viewport" class="messages-scroll-viewport">
+              <!-- Dynamic message bubbles -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: PERSONAS & VOICE STUDIO -->
+      <section class="view-container" id="view-personas">
+        <div style="max-width: 1000px; margin: 0 auto;">
+          <h2 style="font-family: var(--font-heading); margin-bottom: 0.5rem;">Assistant Personality Studio</h2>
+          <p style="color: var(--text-secondary); margin-bottom: 2rem;">Select an assistant persona or choose your ElevenLabs voice configuration.</p>
+
+          <div class="personas-catalog-grid" id="personas-catalog">
+            <!-- Persona cards rendered dynamically -->
+          </div>
+
+          <div class="glass-card">
+            <h3 style="font-family: var(--font-heading); margin-bottom: 1rem;">Assistant Personality & Voice Preferences</h3>
+            <form id="form-personality-settings">
+              <div class="form-grid-responsive">
+                <div class="form-group">
+                  <label class="form-label">Assistant Name</label>
+                  <input type="text" id="pref-assistant-name" class="form-input" value="NORE" placeholder="NORE" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Active Neural Voice</label>
+                  <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <select id="voice-picker-select" class="form-select" style="flex: 1;"></select>
+                    <button type="button" id="btn-preview-voice" class="btn btn-secondary" style="white-space: nowrap; padding: 0.6rem 0.9rem; font-size: 0.85rem;" title="Listen to Voice Sample">
+                      ▶ Sample
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Synthesis Model</label>
+                  <select id="model-picker-select" class="form-select">
+                    <option value="eleven_turbo_v2_5">Eleven Turbo v2.5 (Fastest, Multilingual)</option>
+                    <option value="eleven_multilingual_v2">Eleven Multilingual v2</option>
+                    <option value="eleven_monolingual_v1">Eleven English v1</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Speaking Speed (<span id="pref-speed-val">1.0x</span>)</label>
+                  <input type="range" id="pref-speed-slider" min="0.5" max="2.0" step="0.05" value="1.0" class="form-input" style="padding: 0; cursor: pointer;" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Interruption Mode</label>
+                  <select id="pref-interrupt-mode" class="form-select">
+                    <option value="voice">Voice Barge-In (speak to interrupt)</option>
+                    <option value="manual">Tap to Interrupt (button only)</option>
+                  </select>
+                  <p style="color: var(--text-secondary); font-size: 0.78rem; margin-top: 0.35rem;">
+                    Use "Tap to Interrupt" if you are on a device with loud speakers and no headphones.
+                  </p>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Conversational Tone</label>
+                  <select id="pref-tone-select" class="form-select">
+                    <option value="balanced">Balanced & Natural</option>
+                    <option value="conversational">Warm & Conversational</option>
+                    <option value="concise">Ultra-Concise & Direct</option>
+                    <option value="authoritative">Authoritative & Confident</option>
+                    <option value="empathetic">Empathetic & Supportive</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Formality Level</label>
+                  <select id="pref-formality-select" class="form-select">
+                    <option value="professional">Professional</option>
+                    <option value="casual">Casual & Relaxed</option>
+                    <option value="formal">Formal Executive</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Response Style</label>
+                  <select id="pref-style-select" class="form-select">
+                    <option value="adaptive">Adaptive to Context</option>
+                    <option value="direct">Direct & Action-Oriented</option>
+                    <option value="detailed">Comprehensive & Detailed</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Preferred Language</label>
+                  <select id="pref-lang-select" class="form-select">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="ja">Japanese</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Technology Intelligence Customization -->
+              <div style="border-top: 1px solid var(--border-glass); padding-top: 1.25rem; margin-top: 1.25rem; margin-bottom: 1.25rem;">
+                <h4 style="font-family: var(--font-heading); font-size: 1.05rem; margin-bottom: 0.35rem; color: var(--gold-bright);">
+                  Technology Intelligence & Briefing Preferences
+                </h4>
+                <p style="color: var(--text-secondary); font-size: 0.84rem; margin-bottom: 1rem;">
+                  Tailor which technology domains feed your briefings and calibrate explanation depth.
+                </p>
+
+                <div style="margin-bottom: 1.2rem;">
+                  <label class="form-label">Active Technical Interests</label>
+                  <div class="chips-selector" id="tech-interests-chips">
+                    <span class="interest-chip active" data-domain="ai_ml">AI & Machine Learning</span>
+                    <span class="interest-chip active" data-domain="software_dev">Software Development</span>
+                    <span class="interest-chip active" data-domain="cybersecurity">Cybersecurity</span>
+                    <span class="interest-chip active" data-domain="hardware">Hardware & Silicon</span>
+                    <span class="interest-chip active" data-domain="startups_business">Startups & Business</span>
+                    <span class="interest-chip" data-domain="emerging_tech">Emerging Tech</span>
+                  </div>
+                </div>
+
+                <div class="form-grid-responsive">
+                  <div class="form-group">
+                    <label class="form-label">Technical Explanation Depth</label>
+                    <select id="pref-tech-level-select" class="form-select">
+                      <option value="beginner">Beginner (Intuitive & Plainspoken)</option>
+                      <option value="intermediate" selected>Intermediate (Standard Engineering)</option>
+                      <option value="advanced">Advanced (Systems & Architecture)</option>
+                      <option value="expert">Systems Expert (Low-Level Primitives)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Briefing Synthesis Style</label>
+                    <select id="pref-tech-summary-select" class="form-select">
+                      <option value="concise">Concise (Fast Executive Digest)</option>
+                      <option value="balanced" selected>Balanced (Context & Takeaways)</option>
+                      <option value="in_depth">In-Depth (Comprehensive Deep-Dive)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.5rem;">Save Preferences</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 4: ADMIN DASHBOARD -->
+      <section class="view-container" id="view-admin">
+        <div style="max-width: 1100px; margin: 0 auto;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+            <div>
+              <h2 style="font-family: var(--font-heading);">System Administration</h2>
+              <p style="color: var(--text-secondary); font-size: 0.9rem;">Monitor telemetry, manage user access roles, and audit security events.</p>
+            </div>
+            <div style="display: flex; gap: 0.75rem;">
+              <button class="btn btn-primary" id="btn-open-create-admin" style="display: none;">+ Create Admin</button>
+              <button class="btn btn-secondary" id="btn-run-secret-scan">Run Secret Scan</button>
+            </div>
+          </div>
+
+          <!-- Metric Cards Grid -->
+          <div class="admin-grid">
+            <div class="metric-card">
+              <div class="metric-header"><span>Total Users</span></div>
+              <div class="metric-value" id="stat-total-users">0</div>
+              <div class="metric-sub">Registered accounts</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-header"><span>Characters Synthesized</span></div>
+              <div class="metric-value" id="stat-total-chars">0</div>
+              <div class="metric-sub">ElevenLabs billed</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-header"><span>Estimated Cost</span></div>
+              <div class="metric-value" id="stat-total-cost">$0.00</div>
+              <div class="metric-sub">Based on $0.30/1k chars</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-header"><span>ElevenLabs Status</span></div>
+              <div class="metric-value" id="stat-el-status" style="font-size: 1.4rem;">CHECKING</div>
+              <div class="metric-sub" id="stat-el-tier">Server-Side Secret</div>
+            </div>
+          </div>
+
+          <!-- Owner System Configuration Card -->
+          <div class="glass-card" id="owner-system-config-card" style="display: none; margin-bottom: 2rem;">
+            <h3 style="font-family: var(--font-heading); font-size: 1.15rem; margin-bottom: 1rem;">System & Provider Configuration (Owner Only)</h3>
+            <div class="form-grid-responsive" style="gap: 1rem; font-size: 0.88rem;">
+              <div style="background: rgba(0,0,0,0.3); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">
+                <div style="color: var(--text-muted); font-size: 0.78rem;">ElevenLabs Integration</div>
+                <div id="cfg-elevenlabs-status" style="font-weight: 700; color: var(--gold-bright); margin-top: 4px;">Checking...</div>
+                <div id="cfg-elevenlabs-key" style="font-family: monospace; font-size: 0.76rem; color: var(--text-secondary);">•••••••• (Secure)</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">
+                <div style="color: var(--text-muted); font-size: 0.78rem;">Database Status</div>
+                <div id="cfg-db-status" style="font-weight: 700; color: #10B981; margin-top: 4px;">Connected</div>
+                <div id="cfg-db-dialect" style="font-size: 0.76rem; color: var(--text-secondary);">SQLite (WAL)</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">
+                <div style="color: var(--text-muted); font-size: 0.78rem;">Redis Distributed Limiter</div>
+                <div id="cfg-redis-status" style="font-weight: 700; color: var(--gold-bright); margin-top: 4px;">Checking...</div>
+                <div style="font-size: 0.76rem; color: var(--text-secondary);">In-memory fallback active</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">
+                <div style="color: var(--text-muted); font-size: 0.78rem;">Environment & Security</div>
+                <div id="cfg-env-status" style="font-weight: 700; color: #FFFFFF; margin-top: 4px;">Development</div>
+                <div style="font-size: 0.76rem; color: var(--text-secondary);">Argon2id + JWT + nosniff</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Technology Intelligence Telemetry Card -->
+          <div class="glass-card" style="margin-bottom: 2rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+              <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: var(--gold-bright);">
+                Technology Intelligence & Search Telemetry
+              </h3>
+              <span class="brand-badge" id="admin-search-provider-badge">AUTO (DDG + Feeds)</span>
+            </div>
+            <div class="form-grid-responsive" style="gap: 1rem; font-size: 0.88rem;">
+              <div style="background: rgba(0,0,0,0.3); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">
+                <div style="color: var(--text-muted); font-size: 0.78rem;">Live Web Searches</div>
+                <div id="stat-tech-searches" style="font-weight: 700; font-size: 1.35rem; color: var(--gold-bright); margin-top: 4px;">0</div>
+                <div style="font-size: 0.76rem; color: var(--text-secondary);">Real-time queries processed</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">
+                <div style="color: var(--text-muted); font-size: 0.78rem;">Freshness Cache Hits</div>
+                <div id="stat-tech-cache-hits" style="font-weight: 700; font-size: 1.35rem; color: #10B981; margin-top: 4px;">0</div>
+                <div style="font-size: 0.76rem; color: var(--text-secondary);">TTL tiered hits</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">
+                <div style="color: var(--text-muted); font-size: 0.78rem;">Provider Engine</div>
+                <div id="stat-tech-provider-status" style="font-weight: 700; font-size: 1.1rem; color: #10B981; margin-top: 4px;">Online (Zero-Config)</div>
+                <div style="font-size: 0.76rem; color: var(--text-secondary);">DuckDuckGo + CISA + HN</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Secret Scan Results Container -->
+          <div id="secret-scan-results" style="display: none; margin-bottom: 2rem;"></div>
+
+          <!-- User Management Table -->
+          <div class="glass-card" style="margin-bottom: 2rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+              <h3 style="font-family: var(--font-heading); font-size: 1.15rem;">User Management & RBAC</h3>
+              <input type="text" id="admin-user-search" class="form-input" placeholder="Search user email or name..." style="width: 260px; padding: 0.4rem 0.8rem; font-size: 0.82rem;" />
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Daily Quota</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-users-tbody">
+                  <!-- User rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Audit Logs Table -->
+          <div class="glass-card">
+            <h3 style="font-family: var(--font-heading); font-size: 1.15rem; margin-bottom: 1rem;">Security & Access Audit Logs</h3>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Event</th>
+                    <th>Email</th>
+                    <th>Severity</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-audit-tbody">
+                  <!-- Audit rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- AUTH MODAL -->
+  <div class="modal-overlay" id="modal-auth">
+    <div class="modal-content">
+      <!-- Login Section -->
+      <div id="auth-login-section">
+        <h2 style="font-family: var(--font-heading); margin-bottom: 0.5rem; text-align: center;">Welcome Back</h2>
+        <p style="color: var(--text-secondary); font-size: 0.88rem; text-align: center; margin-bottom: 1.5rem;">Sign in to access NORE</p>
+
+        <form id="form-login">
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="login-email" class="form-input" required placeholder="name@domain.com" />
+          </div>
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label class="form-label" for="login-password">Password</label>
+              <a href="#" id="toggle-to-reset" style="font-size: 0.78rem; color: var(--gold-bright); text-decoration: none; font-weight: 600;">Forgot password?</a>
+            </div>
+            <div class="password-input-wrapper">
+              <input type="password" id="login-password" class="form-input" required placeholder="••••••••" autocomplete="current-password" />
+              <button type="button" class="btn-password-toggle" data-target="login-password" aria-label="Show password" title="Show password">
+                <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">Sign In</button>
+        </form>
+
+        <div style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border-glass); text-align: center; font-size: 0.85rem;">
+          <div style="color: var(--text-secondary);">
+            Don't have an account? <a href="#" id="toggle-to-register" style="color: var(--accent-bright); font-weight: 600; text-decoration: none;">Register here</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Register Section -->
+      <div id="auth-register-section" style="display: none;">
+        <h2 style="font-family: var(--font-heading); margin-bottom: 0.5rem; text-align: center;">Create Account</h2>
+        <p style="color: var(--text-secondary); font-size: 0.88rem; text-align: center; margin-bottom: 1.5rem;">Get started with NORE Voice Platform</p>
+
+        <form id="form-register">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" id="reg-name" class="form-input" placeholder="Alex Morgan" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="reg-email" class="form-input" required placeholder="alex@domain.com" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reg-password">Password</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="reg-password" class="form-input" required minlength="8" placeholder="Minimum 8 characters" autocomplete="new-password" />
+              <button type="button" class="btn-password-toggle" data-target="reg-password" aria-label="Show password" title="Show password">
+                <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">Create Account</button>
+        </form>
+
+        <div style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: var(--text-secondary);">
+          Already have an account? <a href="#" id="toggle-to-login" style="color: var(--gold-bright); font-weight: 600; text-decoration: none;">Sign in</a>
+        </div>
+      </div>
+
+      <!-- Password Reset Section -->
+      <div id="auth-reset-section" style="display: none;">
+        <h2 style="font-family: var(--font-heading); margin-bottom: 0.5rem; text-align: center;">Account Recovery</h2>
+        <p style="color: var(--text-secondary); font-size: 0.88rem; text-align: center; margin-bottom: 1.5rem;">Reset your password securely</p>
+
+        <!-- Step 1: Request Reset Token -->
+        <form id="form-reset-request">
+          <div class="form-group">
+            <label class="form-label">Account Email</label>
+            <input type="email" id="reset-req-email" class="form-input" required placeholder="name@domain.com" />
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">Send Recovery Instructions</button>
+        </form>
+
+        <!-- Step 2: Confirm Reset (shown after request) -->
+        <form id="form-reset-confirm" style="display: none; margin-top: 1.25rem;">
+          <div class="form-group">
+            <label class="form-label">Recovery Token</label>
+            <input type="text" id="reset-confirm-token" class="form-input" required placeholder="Paste recovery token" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reset-confirm-password">New Password</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="reset-confirm-password" class="form-input" required minlength="8" placeholder="Minimum 8 characters" autocomplete="new-password" />
+              <button type="button" class="btn-password-toggle" data-target="reset-confirm-password" aria-label="Show password" title="Show password">
+                <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">Set New Password</button>
+        </form>
+
+        <div style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: var(--text-secondary);">
+          Remembered credentials? <a href="#" id="toggle-reset-to-login" style="color: var(--gold-bright); font-weight: 600; text-decoration: none;">Back to Sign in</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT USER MODAL -->
+  <div class="modal-overlay" id="modal-edit-user">
+    <div class="modal-content">
+      <button class="modal-close">&times;</button>
+      <h3 style="font-family: var(--font-heading); margin-bottom: 1.25rem;">Edit User Access & Quota</h3>
+      <form id="form-edit-user">
+        <input type="hidden" id="edit-user-id" />
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="text" id="edit-user-email" class="form-input" disabled />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select id="edit-user-role" class="form-select">
+            <option value="user">User (Standard Access)</option>
+            <option value="admin">Admin (Staff Management)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Daily Character Quota</label>
+          <input type="number" id="edit-user-quota" class="form-input" step="5000" />
+        </div>
+        <div class="form-group" style="flex-direction: row; align-items: center; gap: 0.5rem;">
+          <input type="checkbox" id="edit-user-active" />
+          <label for="edit-user-active" class="form-label" style="margin: 0;">Account Active</label>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Save Changes</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- CREATE ADMIN MODAL (Owner Only) -->
+  <div class="modal-overlay" id="modal-create-admin">
+    <div class="modal-content">
+      <button class="modal-close">&times;</button>
+      <h3 style="font-family: var(--font-heading); margin-bottom: 0.5rem;">Create New Admin Account</h3>
+      <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">Only the Platform Owner can provision administrative accounts.</p>
+      <form id="form-create-admin">
+        <div class="form-group">
+          <label class="form-label">Admin Full Name</label>
+          <input type="text" id="admin-create-name" class="form-input" required placeholder="Marcus Vance" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Admin Email</label>
+          <input type="email" id="admin-create-email" class="form-input" required placeholder="admin@domain.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="admin-create-password">Password (min 12 secure characters)</label>
+          <div class="password-input-wrapper">
+            <input type="password" id="admin-create-password" class="form-input" required minlength="12" placeholder="Minimum 12 secure characters" autocomplete="new-password" />
+            <button type="button" class="btn-password-toggle" data-target="admin-create-password" aria-label="Show password" title="Show password">
+              <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                <line x1="2" y1="2" x2="22" y2="22"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Provision Admin Principal</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Application Bootstrap Script -->
+  <script type="module" src="/static/js/app.js?v=2.3.0"></script>
+</body>
+</html>
