@@ -78,6 +78,7 @@ async def voice_websocket_endpoint(
 
     await manager.connect(websocket, user.id)
 
+    active_turn_task: Optional[asyncio.Task] = None
     try:
         # Send initial ready state
         await websocket.send_json({
@@ -149,6 +150,8 @@ async def voice_websocket_endpoint(
                 # Handle instant interruption command from client
                 if msg_type == "interrupt":
                     manager.trigger_interrupt(websocket)
+                    if active_turn_task and not active_turn_task.done():
+                        active_turn_task.cancel()
                     await websocket.send_json({"type": "interrupted", "message": "Voice synthesis cancelled."})
                     continue
 
@@ -167,16 +170,27 @@ async def voice_websocket_endpoint(
                     if not user_text or re.match(r"^\[.*?\]$", user_text):
                         continue
 
+                    # Cancel any prior in-flight turn task
+                    if active_turn_task and not active_turn_task.done():
+                        manager.trigger_interrupt(websocket)
+                        active_turn_task.cancel()
+                        try:
+                            await active_turn_task
+                        except (asyncio.CancelledError, Exception):
+                            pass
+
                     # Reset interruption state for new turn
                     manager.reset_interrupt(websocket)
 
-                    await handle_voice_turn(
-                        websocket=websocket,
-                        user=user,
-                        user_text=user_text,
-                        session_id=session_id,
-                        persona_id=persona_id,
-                        voice_id=custom_voice_id,
+                    active_turn_task = asyncio.create_task(
+                        handle_voice_turn(
+                            websocket=websocket,
+                            user=user,
+                            user_text=user_text,
+                            session_id=session_id,
+                            persona_id=persona_id,
+                            voice_id=custom_voice_id,
+                        )
                     )
 
             elif "bytes" in message_data:
@@ -195,6 +209,8 @@ async def voice_websocket_endpoint(
     except Exception as e:
         logger.error(f"WebSocket error for user {user.id}: {e}")
     finally:
+        if active_turn_task and not active_turn_task.done():
+            active_turn_task.cancel()
         manager.disconnect(websocket, user.id)
 
 async def _finish_turn_with_browser_fallback(
