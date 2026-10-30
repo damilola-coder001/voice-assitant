@@ -93,28 +93,34 @@ async def text_to_speech(
                     async for chunk in generator:
                         yield chunk
                     latency_ms = int((time.time() - start_time) * 1000)
-                    await usage_tracker.log_usage(
-                        db=db,
-                        user_id=current_user.id,
-                        operation="tts_stream",
-                        character_count=char_count,
-                        voice_id=voice_id,
-                        model_id=model_id,
-                        latency_ms=latency_ms,
-                        status_code=200,
-                    )
+                    try:
+                        await usage_tracker.log_usage(
+                            db=db,
+                            user_id=current_user.id,
+                            operation="tts_stream",
+                            character_count=char_count,
+                            voice_id=voice_id,
+                            model_id=model_id,
+                            latency_ms=latency_ms,
+                            status_code=200,
+                        )
+                    except Exception:
+                        pass
                 except Exception as e:
                     latency_ms = int((time.time() - start_time) * 1000)
-                    await usage_tracker.log_usage(
-                        db=db,
-                        user_id=current_user.id,
-                        operation="tts_stream",
-                        character_count=char_count,
-                        voice_id=voice_id,
-                        model_id=model_id,
-                        latency_ms=latency_ms,
-                        status_code=500,
-                    )
+                    try:
+                        await usage_tracker.log_usage(
+                            db=db,
+                            user_id=current_user.id,
+                            operation="tts_stream",
+                            character_count=char_count,
+                            voice_id=voice_id,
+                            model_id=model_id,
+                            latency_ms=latency_ms,
+                            status_code=500,
+                        )
+                    except Exception:
+                        pass
                     raise e
 
             return StreamingResponse(tracking_generator(), media_type="audio/mpeg")
@@ -128,16 +134,19 @@ async def text_to_speech(
                 similarity_boost=similarity_boost,
             )
             latency_ms = int((time.time() - start_time) * 1000)
-            await usage_tracker.log_usage(
-                db=db,
-                user_id=current_user.id,
-                operation="tts",
-                character_count=char_count,
-                voice_id=voice_id,
-                model_id=model_id,
-                latency_ms=latency_ms,
-                status_code=200,
-            )
+            try:
+                await usage_tracker.log_usage(
+                    db=db,
+                    user_id=current_user.id,
+                    operation="tts",
+                    character_count=char_count,
+                    voice_id=voice_id,
+                    model_id=model_id,
+                    latency_ms=latency_ms,
+                    status_code=200,
+                )
+            except Exception:
+                pass
             return Response(content=audio_bytes, media_type="audio/mpeg")
 
     except ElevenLabsPermissionError as e:
@@ -170,14 +179,17 @@ async def speech_to_text(
             content_type=audio_file.content_type,
         )
         latency_ms = int((time.time() - start_time) * 1000)
-        await usage_tracker.log_usage(
-            db=db,
-            user_id=current_user.id,
-            operation="stt",
-            character_count=len(transcript),
-            latency_ms=latency_ms,
-            status_code=200,
-        )
+        try:
+            await usage_tracker.log_usage(
+                db=db,
+                user_id=current_user.id,
+                operation="stt",
+                character_count=len(transcript),
+                latency_ms=latency_ms,
+                status_code=200,
+            )
+        except Exception as log_err:
+            logger.debug(f"STT usage log note: {log_err}")
         return {"text": transcript}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Transcription failed: {str(e)}")
@@ -199,15 +211,18 @@ async def speech_to_speech(
             voice_id=target_voice,
         )
         latency_ms = int((time.time() - start_time) * 1000)
-        await usage_tracker.log_usage(
-            db=db,
-            user_id=current_user.id,
-            operation="sts",
-            character_count=0,
-            voice_id=target_voice,
-            latency_ms=latency_ms,
-            status_code=200,
-        )
+        try:
+            await usage_tracker.log_usage(
+                db=db,
+                user_id=current_user.id,
+                operation="sts",
+                character_count=0,
+                voice_id=target_voice,
+                latency_ms=latency_ms,
+                status_code=200,
+            )
+        except Exception as log_err:
+            logger.debug(f"STS usage log note: {log_err}")
         return Response(content=transformed_audio, media_type="audio/mpeg")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Speech to speech failed: {str(e)}")

@@ -506,16 +506,22 @@ async def handle_voice_turn(
             db.add(assistant_msg)
 
             # Log usage
-            await usage_tracker.log_usage(
-                db=db,
-                user_id=user.id,
-                operation="ws_voice_stream",
-                character_count=char_count,
-                voice_id=target_voice,
-                latency_ms=latency_ms,
-                status_code=200,
-            )
-            await db.commit()
+            try:
+                await usage_tracker.log_usage(
+                    db=db,
+                    user_id=user.id,
+                    operation="ws_voice_stream",
+                    character_count=char_count,
+                    voice_id=target_voice,
+                    latency_ms=latency_ms,
+                    status_code=200,
+                )
+            except Exception:
+                pass
+            try:
+                await db.commit()
+            except Exception:
+                pass
 
             # Signal turn completion
             await websocket.send_json({
