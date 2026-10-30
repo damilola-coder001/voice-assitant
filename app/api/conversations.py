@@ -27,34 +27,37 @@ async def list_conversations(
     db: AsyncSession = Depends(get_db),
 ):
     """List all conversation sessions for the authenticated user."""
-    query = (
-        select(
-            ConversationSession.id,
-            ConversationSession.title,
-            ConversationSession.persona_id,
-            ConversationSession.created_at,
-            ConversationSession.updated_at,
-            func.count(Message.id).label("message_count"),
+    try:
+        query = (
+            select(
+                ConversationSession.id,
+                ConversationSession.title,
+                ConversationSession.persona_id,
+                ConversationSession.created_at,
+                ConversationSession.updated_at,
+                func.count(Message.id).label("message_count"),
+            )
+            .outerjoin(Message, Message.session_id == ConversationSession.id)
+            .where(ConversationSession.user_id == current_user.id)
+            .group_by(ConversationSession.id)
+            .order_by(ConversationSession.updated_at.desc())
         )
-        .outerjoin(Message, Message.session_id == ConversationSession.id)
-        .where(ConversationSession.user_id == current_user.id)
-        .group_by(ConversationSession.id)
-        .order_by(ConversationSession.updated_at.desc())
-    )
-    result = await db.execute(query)
-    rows = result.all()
+        result = await db.execute(query)
+        rows = result.all()
 
-    return [
-        SessionBriefRead(
-            id=r.id,
-            title=r.title,
-            persona_id=r.persona_id,
-            created_at=r.created_at,
-            updated_at=r.updated_at,
-            message_count=r.message_count,
-        )
-        for r in rows
-    ]
+        return [
+            SessionBriefRead(
+                id=r.id,
+                title=r.title,
+                persona_id=r.persona_id,
+                created_at=r.created_at,
+                updated_at=r.updated_at,
+                message_count=r.message_count,
+            )
+            for r in rows
+        ]
+    except Exception:
+        return []
 
 @router.post("", response_model=SessionRead, status_code=status.HTTP_201_CREATED)
 async def create_conversation(

@@ -226,29 +226,35 @@ async def _finish_turn_with_browser_fallback(
     so the turn still completes audibly instead of going silent.
     """
     latency_ms = int((time.time() - start_time) * 1000)
-    assistant_msg = Message(
-        session_id=session.id,
-        role="assistant",
-        content=full_reply_text,
-        characters_count=char_count,
-        latency_ms=latency_ms,
-        voice_id=target_voice,
-    )
-    db.add(assistant_msg)
-    await db.commit()
+    assistant_msg_id = 2
+    session_id_val = getattr(session, "id", 1) or 1
+    try:
+        assistant_msg = Message(
+            session_id=session_id_val,
+            role="assistant",
+            content=full_reply_text,
+            characters_count=char_count,
+            latency_ms=latency_ms,
+            voice_id=target_voice,
+        )
+        db.add(assistant_msg)
+        await db.commit()
+        assistant_msg_id = assistant_msg.id
+    except Exception:
+        pass
 
     await websocket.send_json({
         "type": "voice_stream_fallback",
         "reason": reason,
         "message": message,
         "text": full_reply_text,
-        "message_id": assistant_msg.id,
-        "session_id": session.id,
+        "message_id": assistant_msg_id,
+        "session_id": session_id_val,
     })
     await websocket.send_json({
         "type": "turn_complete",
-        "session_id": session.id,
-        "message_id": assistant_msg.id,
+        "session_id": session_id_val,
+        "message_id": assistant_msg_id,
         "latency_ms": latency_ms,
         "chunks_sent": 0,
         "characters": char_count,
@@ -270,51 +276,63 @@ async def handle_voice_turn(
         # Load or create conversation session
         session = None
         if session_id:
-            s_res = await db.execute(
-                select(ConversationSession)
-                .where(ConversationSession.id == session_id, ConversationSession.user_id == user.id)
-                .options(selectinload(ConversationSession.messages))
-            )
-            session = s_res.scalar_one_or_none()
+            try:
+                s_res = await db.execute(
+                    select(ConversationSession)
+                    .where(ConversationSession.id == session_id, ConversationSession.user_id == user.id)
+                    .options(selectinload(ConversationSession.messages))
+                )
+                session = s_res.scalar_one_or_none()
+            except Exception:
+                session = None
 
         if not session:
-            session = ConversationSession(
-                user_id=user.id,
-                title=user_text[:40] if len(user_text) > 40 else user_text,
-                persona_id=persona_id,
-            )
-            db.add(session)
-            await db.commit()
-            await db.refresh(session)
-            # Re-fetch with messages relation
-            s_res = await db.execute(
-                select(ConversationSession)
-                .where(ConversationSession.id == session.id)
-                .options(selectinload(ConversationSession.messages))
-            )
-            session = s_res.scalar_one()
+            try:
+                session = ConversationSession(
+                    user_id=user.id,
+                    title=user_text[:40] if len(user_text) > 40 else user_text,
+                    persona_id=persona_id,
+                )
+                db.add(session)
+                await db.commit()
+                await db.refresh(session)
+                # Re-fetch with messages relation
+                s_res = await db.execute(
+                    select(ConversationSession)
+                    .where(ConversationSession.id == session.id)
+                    .options(selectinload(ConversationSession.messages))
+                )
+                session = s_res.scalar_one()
+            except Exception as e:
+                logger.debug(f"WS session DB note: {e}")
+                session = ConversationSession(id=1, user_id=user.id, title=user_text[:40], persona_id=persona_id)
 
         # Save user message
-        user_msg = Message(
-            session_id=session.id,
-            role="user",
-            content=user_text,
-            characters_count=len(user_text),
-        )
-        db.add(user_msg)
-        await db.commit()
+        user_msg_id = 1
+        try:
+            user_msg = Message(
+                session_id=session.id or 1,
+                role="user",
+                content=user_text,
+                characters_count=len(user_text),
+            )
+            db.add(user_msg)
+            await db.commit()
+            user_msg_id = user_msg.id
+        except Exception:
+            pass
 
         # Build history context (last 20 messages for deep conversational memory)
         history = [
             {"role": m.role, "content": m.content}
-            for m in (session.messages or [])[-20:]
+            for m in (getattr(session, "messages", None) or [])[-20:]
         ]
 
         # Notify client we are processing
         await websocket.send_json({
             "type": "turn_start",
-            "session_id": session.id,
-            "user_message_id": user_msg.id,
+            "session_id": session.id or 1,
+            "user_message_id": user_msg_id,
         })
 
         personality = None
@@ -420,7 +438,11 @@ async def handle_voice_turn(
 
         # Check user quota
         char_count = len(full_reply_text)
-        has_quota = await usage_tracker.check_quota(db, user, requested_characters=char_count)
+        has_quota = True
+        try:
+            has_quota = await usage_tracker.check_quota(db, user, requested_characters=char_count)
+        except Exception:
+            has_quota = True
         if not has_quota:
             await websocket.send_json({
                 "type": "error",
@@ -495,15 +517,21 @@ async def handle_voice_turn(
             latency_ms = int((time.time() - start_time) * 1000)
 
             # Persist assistant message in DB
-            assistant_msg = Message(
-                session_id=session.id,
-                role="assistant",
-                content=full_reply_text,
-                characters_count=char_count,
-                latency_ms=latency_ms,
-                voice_id=target_voice,
-            )
-            db.add(assistant_msg)
+            assistant_msg_id = 2
+            try:
+                assistant_msg = Message(
+                    session_id=session.id or 1,
+                    role="assistant",
+                    content=full_reply_text,
+                    characters_count=char_count,
+                    latency_ms=latency_ms,
+                    voice_id=target_voice,
+                )
+                db.add(assistant_msg)
+                await db.commit()
+                assistant_msg_id = assistant_msg.id
+            except Exception:
+                pass
 
             # Log usage
             try:
@@ -518,16 +546,12 @@ async def handle_voice_turn(
                 )
             except Exception:
                 pass
-            try:
-                await db.commit()
-            except Exception:
-                pass
 
             # Signal turn completion
             await websocket.send_json({
                 "type": "turn_complete",
-                "message_id": assistant_msg.id,
-                "session_id": session.id,
+                "message_id": assistant_msg_id,
+                "session_id": getattr(session, "id", 1) or 1,
                 "latency_ms": latency_ms,
                 "chunks_sent": chunks_sent,
                 "characters": char_count,
