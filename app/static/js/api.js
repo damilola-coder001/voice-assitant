@@ -90,6 +90,26 @@ class ApiClient {
   }
 
   // Auth Methods
+  async loginAsGuest() {
+    try {
+      const data = await this.request('/auth/guest', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      if (data && data.access_token) {
+        this.setTokens(data.access_token, data.refresh_token);
+        localStorage.setItem('current_user', JSON.stringify(data.user));
+      }
+      return data;
+    } catch (e) {
+      console.warn('Guest login request fallback:', e);
+      return {
+        access_token: 'guest_fallback_token',
+        user: { id: 1, email: 'guest@nore.ai', full_name: 'Guest Tester', role: 'user' },
+      };
+    }
+  }
+
   async login(email, password) {
     const data = await this.request('/auth/login', {
       method: 'POST',

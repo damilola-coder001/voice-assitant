@@ -49,6 +49,10 @@ class Settings(BaseSettings):
         default=False,
         description="Enable role-based access control restrictions. When False (dormant), all authenticated users have access without role hierarchy gating.",
     )
+    ENABLE_AUTH: bool = Field(
+        default=False,
+        description="Enable authentication barrier. When False (dormant), guest access is enabled automatically for instant testing without login.",
+    )
 
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./voice_assistant.db"

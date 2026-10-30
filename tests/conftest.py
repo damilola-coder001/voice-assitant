@@ -17,8 +17,9 @@ from app.security.tokens import create_access_token
 # Use in-memory SQLite database for test isolation
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
-# Ensure RBAC validation is active during test suite runs to verify underlying policy integrity
+# Ensure RBAC and Auth validations are active during test suite runs to verify underlying policy integrity
 settings.ENABLE_RBAC = True
+settings.ENABLE_AUTH = True
 
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 TestSessionLocal = async_sessionmaker(

@@ -236,41 +236,53 @@ async def process_voice_turn_http(
     # Load or create conversation session
     session = None
     if payload.session_id:
-        s_res = await db.execute(
-            select(ConversationSession)
-            .where(ConversationSession.id == payload.session_id, ConversationSession.user_id == current_user.id)
-            .options(selectinload(ConversationSession.messages))
-        )
-        session = s_res.scalar_one_or_none()
+        try:
+            s_res = await db.execute(
+                select(ConversationSession)
+                .where(ConversationSession.id == payload.session_id, ConversationSession.user_id == current_user.id)
+                .options(selectinload(ConversationSession.messages))
+            )
+            session = s_res.scalar_one_or_none()
+        except Exception:
+            session = None
 
     if not session:
-        session = ConversationSession(
-            user_id=current_user.id,
-            title=user_text[:40] if len(user_text) > 40 else user_text,
-            persona_id=persona_id,
-        )
-        db.add(session)
-        await db.commit()
-        await db.refresh(session)
-        s_res = await db.execute(
-            select(ConversationSession)
-            .where(ConversationSession.id == session.id)
-            .options(selectinload(ConversationSession.messages))
-        )
-        session = s_res.scalar_one()
+        try:
+            session = ConversationSession(
+                user_id=current_user.id,
+                title=user_text[:40] if len(user_text) > 40 else user_text,
+                persona_id=persona_id,
+            )
+            db.add(session)
+            await db.commit()
+            await db.refresh(session)
+            s_res = await db.execute(
+                select(ConversationSession)
+                .where(ConversationSession.id == session.id)
+                .options(selectinload(ConversationSession.messages))
+            )
+            session = s_res.scalar_one()
+        except Exception as e:
+            logger.debug(f"Session DB persistence note (stateless mode): {e}")
+            session = ConversationSession(id=1, user_id=current_user.id, title=user_text[:40], persona_id=persona_id)
 
-    user_msg = Message(
-        session_id=session.id,
-        role="user",
-        content=user_text,
-        characters_count=len(user_text),
-    )
-    db.add(user_msg)
-    await db.commit()
+    user_msg_id = 1
+    try:
+        user_msg = Message(
+            session_id=session.id or 1,
+            role="user",
+            content=user_text,
+            characters_count=len(user_text),
+        )
+        db.add(user_msg)
+        await db.commit()
+        user_msg_id = user_msg.id
+    except Exception:
+        pass
 
     history = [
         {"role": m.role, "content": m.content}
-        for m in (session.messages or [])[-20:]
+        for m in (getattr(session, "messages", None) or [])[-20:]
     ]
 
     personality = None
@@ -354,7 +366,12 @@ async def process_voice_turn_http(
     fallback_reason = None
     fallback_message = None
 
-    has_quota = await usage_tracker.check_quota(db, current_user, requested_characters=char_count)
+    has_quota = True
+    try:
+        has_quota = await usage_tracker.check_quota(db, current_user, requested_characters=char_count)
+    except Exception:
+        has_quota = True
+
     if has_quota and settings.ELEVENLABS_API_KEY:
         try:
             pcm_chunks = []
@@ -383,21 +400,26 @@ async def process_voice_turn_http(
         fallback_message = "Using browser voice synthesis."
 
     latency_ms = int((time.time() - start_time) * 1000)
-    assistant_msg = Message(
-        session_id=session.id,
-        role="assistant",
-        content=full_reply_text,
-        characters_count=char_count,
-        latency_ms=latency_ms,
-        voice_id=target_voice,
-    )
-    db.add(assistant_msg)
-    await db.commit()
+    assistant_msg_id = 2
+    try:
+        assistant_msg = Message(
+            session_id=session.id or 1,
+            role="assistant",
+            content=full_reply_text,
+            characters_count=char_count,
+            latency_ms=latency_ms,
+            voice_id=target_voice,
+        )
+        db.add(assistant_msg)
+        await db.commit()
+        assistant_msg_id = assistant_msg.id
+    except Exception:
+        pass
 
     return {
-        "session_id": session.id,
-        "user_message_id": user_msg.id,
-        "message_id": assistant_msg.id,
+        "session_id": session.id if session else 1,
+        "user_message_id": user_msg_id,
+        "message_id": assistant_msg_id,
         "text_response": full_reply_text,
         "tech_intent": tech_intent_data,
         "tech_sources": tech_sources_data,

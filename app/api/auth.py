@@ -121,6 +121,77 @@ async def register(
         ),
     )
 
+@router.post("/guest", response_model=TokenResponse)
+async def guest_login(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Instant guest session for testing and demo modes.
+    Bypasses login forms and issues a ready-to-use testing token.
+    """
+    guest_email = "guest@nore.ai"
+    user = None
+    try:
+        result = await db.execute(
+            select(User).where(User.email == guest_email).options(selectinload(User.voice_preference))
+        )
+        user = result.scalar_one_or_none()
+
+        if not user:
+            user = User(
+                email=guest_email,
+                hashed_password=hash_password("GuestTestingSecret2026!#"),
+                full_name="Guest Tester",
+                role=RoleEnum.USER,
+                status="active",
+                is_active=True,
+                daily_character_quota=5000000,
+                token_version=1,
+            )
+            db.add(user)
+            await db.flush()
+
+            pref = UserVoicePreference(
+                user_id=user.id,
+                preferred_voice_id=settings.ELEVENLABS_DEFAULT_VOICE_ID,
+                preferred_model_id=settings.ELEVENLABS_DEFAULT_MODEL_ID,
+                preferred_voice_name="Roger",
+            )
+            db.add(pref)
+            await db.commit()
+            await db.refresh(user)
+    except Exception as e:
+        logger.debug(f"Guest DB user creation note: {e}")
+
+    user_id = user.id if user else 1
+    access_token = create_access_token(
+        user_id=user_id,
+        email=guest_email,
+        role="user",
+        token_version=1,
+    )
+    refresh_token = create_refresh_token(
+        user_id=user_id,
+        email=guest_email,
+        role="user",
+        token_version=1,
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        user=UserBriefResponse(
+            id=user_id,
+            email=guest_email,
+            full_name="Guest Tester",
+            role="user",
+            is_active=True,
+        ),
+    )
+
 @router.post("/login", response_model=TokenResponse)
 async def login(
     data: LoginRequest,

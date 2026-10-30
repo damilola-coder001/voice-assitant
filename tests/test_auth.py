@@ -134,3 +134,11 @@ async def test_password_reset_flow(client: AsyncClient, test_user: User):
     )
     assert new_login_res.status_code == 200
 
+@pytest.mark.asyncio
+async def test_guest_login_instant_access(client: AsyncClient):
+    res = await client.post("/api/auth/guest")
+    assert res.status_code == 200
+    data = res.json()
+    assert "access_token" in data
+    assert data["user"]["email"] == "guest@nore.ai"
+

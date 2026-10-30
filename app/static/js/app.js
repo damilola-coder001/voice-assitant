@@ -44,19 +44,30 @@ class App {
 
     this.bindEvents();
 
-    // Check existing auth
+    // Check existing auth or auto-login as guest for seamless testing
     const token = api.getAccessToken();
     if (token) {
       try {
         this.currentUser = await api.getMe();
         this.onUserAuthenticated();
       } catch (err) {
-        console.warn('Stored session invalid:', err);
-        api.clearTokens();
-        this.showAuthModal();
+        console.warn('Stored session invalid, auto-refreshing guest session:', err);
+        await this.autoGuestLogin();
       }
     } else {
-      this.showAuthModal();
+      await this.autoGuestLogin();
+    }
+  }
+
+  async autoGuestLogin() {
+    try {
+      const authData = await api.loginAsGuest();
+      this.currentUser = (authData && authData.user) ? authData.user : { full_name: 'Guest Tester', email: 'guest@nore.ai', role: 'user' };
+      this.onUserAuthenticated();
+    } catch (err) {
+      console.warn('Guest login fallback note:', err);
+      this.currentUser = { full_name: 'Guest Tester', email: 'guest@nore.ai', role: 'user' };
+      this.onUserAuthenticated();
     }
   }
 
@@ -398,9 +409,7 @@ class App {
 
   async startConversationSession() {
     if (!api.getAccessToken()) {
-      this.showToast('Please sign in first to start a voice conversation.', 'info');
-      this.showAuthModal();
-      return;
+      await this.autoGuestLogin();
     }
 
     if (this.conversationActive) return;

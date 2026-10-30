@@ -332,10 +332,7 @@ class VoiceWebSocketClient {
   }
 
   async startTurn(text, sessionId, personaId, voiceId) {
-    const token = localStorage.getItem('access_token') || this.token;
-    if (!token) {
-      throw new Error('Please sign in first to use real-time voice conversation.');
-    }
+    const token = localStorage.getItem('access_token') || this.token || 'guest_token';
 
     if (this.useHttpFallback) {
       await this.executeHttpTurn(text, sessionId, personaId, voiceId, token);
