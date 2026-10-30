@@ -889,14 +889,14 @@ class App {
     document.querySelector('#sidebar-user-name').textContent = this.currentUser.full_name || this.currentUser.email;
     const roleEl = document.querySelector('#sidebar-user-role');
     if (roleEl) {
-      roleEl.className = `badge badge-${this.currentUser.role}`;
-      roleEl.textContent = this.currentUser.role === 'owner' ? 'Owner' : this.currentUser.role.toUpperCase();
+      // In dormant RBAC mode: keep role badges hidden from interface
+      roleEl.style.display = 'none';
     }
 
-    // Show Admin tab if owner or admin
+    // In dormant RBAC mode: keep Admin dashboard hidden from navigation
     const adminNav = document.querySelector('.nav-item[data-view="admin"]');
     if (adminNav) {
-      adminNav.style.display = (this.currentUser.role === 'owner' || this.currentUser.role === 'admin') ? 'flex' : 'none';
+      adminNav.style.display = 'none';
     }
 
     // Connect WebSocket

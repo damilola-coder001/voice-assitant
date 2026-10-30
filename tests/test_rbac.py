@@ -109,3 +109,15 @@ async def test_owner_immortality_cannot_be_deleted(client: AsyncClient, owner_to
     )
     assert res.status_code == 400
     assert "cannot be deleted" in res.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_dormant_rbac_mode_allows_standard_user(client: AsyncClient, user_token: str):
+    from app.config import settings
+    # Temporarily set dormant mode
+    settings.ENABLE_RBAC = False
+    try:
+        res = await client.get("/api/admin/stats", headers={"Authorization": f"Bearer {user_token}"})
+        assert res.status_code == 200
+    finally:
+        # Restore for remaining test suite
+        settings.ENABLE_RBAC = True

@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     OWNER_INITIAL_EMAIL: Optional[str] = "owner@nore.ai"
     OWNER_INITIAL_PASSWORD: Optional[str] = "NoreOwner#2026!Master"
 
+    # Access Control & RBAC Configuration
+    ENABLE_RBAC: bool = Field(
+        default=False,
+        description="Enable role-based access control restrictions. When False (dormant), all authenticated users have access without role hierarchy gating.",
+    )
+
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./voice_assistant.db"
 

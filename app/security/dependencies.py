@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.config import settings
 from app.database import get_db
 from app.models.user import RoleEnum, User
 from app.security.tokens import decode_token
@@ -72,6 +73,10 @@ async def get_current_user(
 def require_role(allowed_roles: List[RoleEnum]):
     """RBAC Route Guard checking if current user has one of allowed roles."""
     async def role_checker(current_user: User = Depends(get_current_user)) -> User:
+        if not settings.ENABLE_RBAC:
+            # Dormant RBAC mode: Role-based restrictions bypassed for all authenticated users
+            return current_user
+
         if current_user.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

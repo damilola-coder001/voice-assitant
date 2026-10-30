@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 from fastapi import HTTPException, status
 
+from app.config import settings
 from app.models.user import RoleEnum, User
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,10 @@ class AuthorizationPolicy:
         Validate whether `actor` is authorized to perform `operation` on `target`.
         Operations include: "view", "modify", "change_role", "suspend", "reactivate", "delete", "reset_password".
         """
+        if not settings.ENABLE_RBAC:
+            # Dormant RBAC mode: Allow operations without role restrictions
+            return True
+
         # --- RULE 1: TARGET IS OWNER (Protected Principal Safeguard - Section 10 & 14) ---
         if target.role == RoleEnum.OWNER:
             if actor.role != RoleEnum.OWNER or actor.id != target.id:
