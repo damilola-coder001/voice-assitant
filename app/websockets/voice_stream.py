@@ -44,31 +44,27 @@ async def voice_websocket_endpoint(
     Real-time bidirectional streaming voice interaction over WebSocket.
     Supports streaming TTS chunking, token transcription, and instant interruptions.
     """
-    if not token:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing authentication token")
-        return
-
-    payload = decode_token(token, expected_type="access")
-    if not payload:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid or expired token")
-        return
-
-    try:
-        user_id = int(payload.sub)
-    except Exception:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid token subject")
-        return
-
-    # Fetch user from database
-    async with AsyncSessionLocal() as db:
-        user_res = await db.execute(
-            select(User).where(User.id == user_id).options(selectinload(User.voice_preference))
-        )
-        user = user_res.scalar_one_or_none()
+    user = None
+    if token:
+        payload = decode_token(token, expected_type="access")
+        if payload:
+            try:
+                user_id = int(payload.sub)
+                async with AsyncSessionLocal() as db:
+                    user_res = await db.execute(
+                        select(User).where(User.id == user_id).options(selectinload(User.voice_preference))
+                    )
+                    user = user_res.scalar_one_or_none()
+            except Exception:
+                user = None
 
     if not user or not user.is_active:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="User inactive or deleted")
-        return
+        if not settings.ENABLE_AUTH:
+            from app.security.dependencies import get_fallback_guest_user
+            user = get_fallback_guest_user()
+        else:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Authentication failed")
+            return
 
     # Enforce connection limits (max per user and server-wide)
     can_connect, limit_reason = manager.can_connect(user.id)

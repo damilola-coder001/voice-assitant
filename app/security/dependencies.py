@@ -93,6 +93,8 @@ async def get_current_user(
 
     # Check session revocation / token invalidation
     if payload.token_version != user.token_version:
+        if not settings.ENABLE_AUTH:
+            return get_fallback_guest_user()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session has been revoked or invalidated. Please log in again.",
@@ -100,6 +102,8 @@ async def get_current_user(
         )
 
     if not user.is_active or user.status == "suspended":
+        if not settings.ENABLE_AUTH:
+            return get_fallback_guest_user()
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is suspended or deactivated",

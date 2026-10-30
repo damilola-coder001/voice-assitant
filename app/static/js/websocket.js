@@ -391,16 +391,47 @@ class VoiceWebSocketClient {
       signal: this.httpTurnAbortController.signal,
     });
 
-    if (!res.ok) {
-      let detail = `Voice turn failed (${res.status})`;
+    let response = res;
+    if (response.status === 401) {
+      console.warn('[VoiceClient] Turn rejected (401). Auto-refreshing guest session...');
       try {
-        const errJson = await res.json();
+        const guestRes = await fetch('/api/auth/guest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        if (guestRes.ok) {
+          const guestData = await guestRes.json();
+          if (guestData && guestData.access_token) {
+            localStorage.setItem('access_token', guestData.access_token);
+            if (guestData.refresh_token) localStorage.setItem('refresh_token', guestData.refresh_token);
+            response = await fetch('/api/speech/turn', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${guestData.access_token}`,
+              },
+              body: JSON.stringify({
+                text: text,
+                session_id: sessionId,
+                persona_id: personaId || 'executive',
+                voice_id: voiceId || null,
+              }),
+              signal: this.httpTurnAbortController.signal,
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Auto-guest retry error:', e);
+      }
+    }
+
+    if (!response.ok) {
+      let detail = `Voice turn failed (${response.status})`;
+      try {
+        const errJson = await response.json();
         if (errJson.detail) detail = errJson.detail;
       } catch (_) {}
       throw new Error(detail);
     }
 
-    const data = await res.json();
+    const data = await response.json();
 
     if (data.tech_intent && this.onTechIntent) {
       this.onTechIntent(data.tech_intent);

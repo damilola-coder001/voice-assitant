@@ -44,15 +44,24 @@ class ApiClient {
     let response = await fetch(url, options);
 
     // Attempt token refresh on 401
-    if (response.status === 401 && this.getRefreshToken() && !endpoint.includes('/auth/')) {
-      const refreshed = await this.refreshToken();
-      if (refreshed) {
-        options.headers['Authorization'] = `Bearer ${this.getAccessToken()}`;
-        response = await fetch(url, options);
-      } else {
-        this.clearTokens();
-        window.dispatchEvent(new CustomEvent('auth:required'));
-        throw new Error('Session expired. Please log in again.');
+    if (response.status === 401 && !endpoint.includes('/auth/')) {
+      if (this.getRefreshToken()) {
+        try {
+          const refreshed = await this.refreshToken();
+          if (refreshed) {
+            options.headers['Authorization'] = `Bearer ${this.getAccessToken()}`;
+            response = await fetch(url, options);
+          }
+        } catch (_) {}
+      }
+      if (response.status === 401) {
+        try {
+          const guestRes = await this.loginAsGuest();
+          if (guestRes && guestRes.access_token) {
+            options.headers['Authorization'] = `Bearer ${guestRes.access_token}`;
+            response = await fetch(url, options);
+          }
+        } catch (_) {}
       }
     }
 
